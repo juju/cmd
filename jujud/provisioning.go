@@ -200,12 +200,10 @@ func (p *Provisioner) findUnknownInstances() ([]environs.Instance, error) {
 	}
 	for _, m := range machines {
 		id, err := m.InstanceId()
-		if err != nil {
-			return nil, err
-		}
-		if id == "" {
-			// TODO(dfc) InstanceId should return an error if the id isn't set.
+		if err == state.NoInstanceIdError {
 			continue
+		} else if err != nil {
+			return nil, err
 		}
 		delete(instances, id)
 	}
@@ -221,15 +219,12 @@ func (p *Provisioner) findNotStarted(machines []*state.Machine) ([]*state.Machin
 	var notstarted []*state.Machine
 	for _, m := range machines {
 		id, err := m.InstanceId()
-		if err != nil {
+		if err == state.NoInstanceIdError {
+			notstarted = append(notstarted, m)
+		} else if err != nil {
 			return nil, err
 		}
-		if id == "" {
-			// TODO(dfc) InstanceId should return an error if the id isn't set.
-			notstarted = append(notstarted, m)
-		} else {
-			log.Printf("machine %s already started as instance %q", m, id)
-		}
+		log.Printf("machine %s already started as instance %q", m, id)
 	}
 	return notstarted, nil
 }

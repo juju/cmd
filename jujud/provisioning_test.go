@@ -160,7 +160,7 @@ func (s *ProvisioningSuite) checkMachineId(c *C, m *state.Machine, isEmpty bool)
 	// TODO(dfc) add machine.WatchConfig() to avoid having to poll.
 	for a := veryShortAttempt.Start(); a.Next(); {
 		id, err := m.InstanceId()
-		if err != nil {
+		if err != nil && err != state.NoInstanceIdError {
 			c.Check(err, IsNil)
 			return false
 		}
