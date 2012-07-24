@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"strconv"
 
 	"launchpad.net/gnuflag"
 	"launchpad.net/juju-core/cmd"
@@ -34,7 +33,8 @@ func (c *StatusCommand) Init(f *gnuflag.FlagSet, args []string) error {
 }
 
 type result struct {
-	Machines map[string]interface{} `yaml:"machines" json:"machines"`
+	Machines map[int]interface{} `yaml:"machines" json:"-"`
+	MachinesJSON map[string]interface{} `yaml:"-" json:"machines"`
 	Services map[string]interface{} `yaml:"services" json:"services"`
 }
 
@@ -61,7 +61,7 @@ func (c *StatusCommand) Run(ctx *cmd.Context) error {
 	}
 
 	r := result{
-		make(map[string]interface{}),
+		make(map[int]interface{}),
 		make(map[string]interface{}),
 	}
 
@@ -72,6 +72,7 @@ func (c *StatusCommand) Run(ctx *cmd.Context) error {
 
 	// TODO(dfc) process services and units
 
+	if c.out.(
 	return c.out.Write(ctx, r)
 }
 
@@ -105,13 +106,12 @@ func fetchAllMachines(st *state.State) (map[int]*state.Machine, error) {
 
 // processMachines gathers information about machines.
 // nb. due to the limitations of encoding/json, the key of the map is a string, not an int.
-func processMachines(machines map[int]*state.Machine, instances map[string]environs.Instance) (map[string]interface{}, error) {
-	r := make(map[string]interface{})
+func processMachines(machines map[int]*state.Machine, instances map[string]environs.Instance) (map[int]interface{}, error) {
+	r := make(map[int]interface{})
 	for _, m := range machines {
-		machineid := strconv.Itoa(m.Id())
 		instid, err := m.InstanceId()
 		if err, ok := err.(*state.NoInstanceIdError); ok {
-			r[machineid] = map[string]interface{}{
+			r[m.Id()] = map[string]interface{}{
 				"instance-id": "pending",
 			}
 		} else if err != nil {
@@ -121,13 +121,13 @@ func processMachines(machines map[int]*state.Machine, instances map[string]envir
 			if !ok {
 				// Double plus ungood. There is an instance id recorded for this machine in the state,
 				// yet the environ cannot find that id. 
-				return nil, fmt.Errorf("instance %s for machine %s not found", instid, machineid)
+				return nil, fmt.Errorf("instance %s for machine %d not found", instid, m.Id())
 			}
-			m, err := processMachine(m, instance)
+			machine, err := processMachine(m, instance)
 			if err != nil {
 				return nil, err
 			}
-			r[machineid] = m
+			r[m.Id()] = machine
 		}
 	}
 	return r, nil

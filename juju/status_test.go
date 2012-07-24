@@ -57,7 +57,7 @@ var statusTests = []struct {
 		"empty state",
 		func(*state.State, *juju.Conn, *C) {},
 		map[string]interface{}{
-			"machines": make(map[string]interface{}),
+			"machines": make(map[int]interface{}),
 			"services": make(map[string]interface{}),
 		},
 	},
@@ -71,12 +71,12 @@ var statusTests = []struct {
 		},
 		map[string]interface{}{
 			// note: the key of the machines map is a string
-			"machines": map[string]interface{}{
-				"0": map[string]interface{}{
+			"machines": map[int]interface{}{
+				0: map[string]interface{}{
 					"instance-id": "pending",
 				},
 			},
-			"services": make(map[string]interface{}),
+			"services": make(map[int]interface{}),
 		},
 	},
 	{
@@ -92,8 +92,8 @@ var statusTests = []struct {
 		},
 		map[string]interface{}{
 			// note: the key of the machines map is a string
-			"machines": map[string]interface{}{
-				"0": map[string]interface{}{
+			"machines": map[int]interface{}{
+				0: map[string]interface{}{
 					"dns-name":    "palermo-0.dns",
 					"instance-id": "palermo-0",
 				},
