@@ -189,7 +189,6 @@ func (a *MachineAgent) APIWorker() (worker.Worker, error) {
 	reportOpenedAPI(st)
 	for _, job := range entity.Jobs() {
 		if job.NeedsState() {
-			agentConfig.SetStateManager(true)
 			a.setAgentConfig(agentConfig)
 			break
 		}
