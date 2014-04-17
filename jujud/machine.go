@@ -429,7 +429,6 @@ func isPreHAVersion(v version.Number) bool {
 // it should be true before 1.20 is released or we'll
 // have more upgrade scenarios on our hands.
 func shouldEnableHA(agentConfig agent.Config) bool {
-	return true // XXX
 	providerType := agentConfig.Value(agent.ProviderType)
 	return providerType != provider.Local
 }
