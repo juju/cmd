@@ -13,8 +13,8 @@ import (
 	"launchpad.net/gnuflag"
 	gc "launchpad.net/gocheck"
 
-	"github.com/juju/juju/cmd"
-	"github.com/juju/juju/testing"
+	"github.com/juju/cmd"
+	"github.com/juju/cmd/cmdtesting"
 )
 
 type FileVarSuite struct {
@@ -28,7 +28,7 @@ var _ = gc.Suite(&FileVarSuite{})
 
 func (s *FileVarSuite) SetUpTest(c *gc.C) {
 	s.FakeHomeSuite.SetUpTest(c)
-	s.ctx = testing.Context(c)
+	s.ctx = cmdtesting.Context(c)
 	s.ValidPath = s.ctx.AbsPath("valid.yaml")
 	s.InvalidPath = s.ctx.AbsPath("invalid.yaml")
 	f, err := os.Create(s.ValidPath)
@@ -72,7 +72,7 @@ func (s *FileVarSuite) TestInvalidFileVar(c *gc.C) {
 
 func fs() (*gnuflag.FlagSet, *cmd.FileVar) {
 	var config cmd.FileVar
-	fs := testing.NewFlagSet()
+	fs := cmdtesting.NewFlagSet()
 	fs.Var(&config, "config", "the config")
 	return fs, &config
 }

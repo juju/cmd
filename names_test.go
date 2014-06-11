@@ -6,7 +6,7 @@ package cmd_test
 import (
 	gc "launchpad.net/gocheck"
 
-	"github.com/juju/juju/cmd"
+	"github.com/juju/cmd"
 )
 
 type namesSuite struct {

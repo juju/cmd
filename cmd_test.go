@@ -5,42 +5,32 @@ package cmd_test
 
 import (
 	"bytes"
-	"net/http"
 	"os"
 	"path/filepath"
 
-	jc "github.com/juju/testing/checkers"
-	"github.com/juju/utils"
 	gc "launchpad.net/gocheck"
 
-	"github.com/juju/juju/cmd"
-	"github.com/juju/juju/testing"
+	"github.com/juju/cmd"
+	"github.com/juju/cmd/cmdtesting"
 )
 
 type CmdSuite struct{}
 
 var _ = gc.Suite(&CmdSuite{})
 
-func (s *CmdSuite) TestHttpTransport(c *gc.C) {
-	transport := http.DefaultTransport.(*http.Transport)
-	c.Assert(transport.DisableKeepAlives, jc.IsTrue)
-	client := utils.GetNonValidatingHTTPClient()
-	c.Assert(client.Transport.(*http.Transport).DisableKeepAlives, jc.IsTrue)
-}
-
 func (s *CmdSuite) TestContext(c *gc.C) {
-	ctx := testing.Context(c)
+	ctx := cmdtesting.Context(c)
 	c.Assert(ctx.AbsPath("/foo/bar"), gc.Equals, "/foo/bar")
 	c.Assert(ctx.AbsPath("foo/bar"), gc.Equals, filepath.Join(ctx.Dir, "foo/bar"))
 }
 
 func (s *CmdSuite) TestInfo(c *gc.C) {
 	minimal := &TestCommand{Name: "verb", Minimal: true}
-	help := minimal.Info().Help(testing.NewFlagSet())
+	help := minimal.Info().Help(cmdtesting.NewFlagSet())
 	c.Assert(string(help), gc.Equals, minimalHelp)
 
 	full := &TestCommand{Name: "verb"}
-	f := testing.NewFlagSet()
+	f := cmdtesting.NewFlagSet()
 	var ignored string
 	f.StringVar(&ignored, "option", "", "option-doc")
 	help = full.Info().Help(f)
@@ -62,7 +52,7 @@ var initErrorTests = []struct {
 
 func (s *CmdSuite) TestMainInitError(c *gc.C) {
 	for _, t := range initErrorTests {
-		ctx := testing.Context(c)
+		ctx := cmdtesting.Context(c)
 		result := cmd.Main(t.c, ctx, []string{"--unknown"})
 		c.Assert(result, gc.Equals, 2)
 		c.Assert(bufferString(ctx.Stdout), gc.Equals, "")
@@ -72,7 +62,7 @@ func (s *CmdSuite) TestMainInitError(c *gc.C) {
 }
 
 func (s *CmdSuite) TestMainRunError(c *gc.C) {
-	ctx := testing.Context(c)
+	ctx := cmdtesting.Context(c)
 	result := cmd.Main(&TestCommand{Name: "verb"}, ctx, []string{"--option", "error"})
 	c.Assert(result, gc.Equals, 1)
 	c.Assert(bufferString(ctx.Stdout), gc.Equals, "")
@@ -80,7 +70,7 @@ func (s *CmdSuite) TestMainRunError(c *gc.C) {
 }
 
 func (s *CmdSuite) TestMainRunSilentError(c *gc.C) {
-	ctx := testing.Context(c)
+	ctx := cmdtesting.Context(c)
 	result := cmd.Main(&TestCommand{Name: "verb"}, ctx, []string{"--option", "silent-error"})
 	c.Assert(result, gc.Equals, 1)
 	c.Assert(bufferString(ctx.Stdout), gc.Equals, "")
@@ -88,7 +78,7 @@ func (s *CmdSuite) TestMainRunSilentError(c *gc.C) {
 }
 
 func (s *CmdSuite) TestMainSuccess(c *gc.C) {
-	ctx := testing.Context(c)
+	ctx := cmdtesting.Context(c)
 	result := cmd.Main(&TestCommand{Name: "verb"}, ctx, []string{"--option", "success!"})
 	c.Assert(result, gc.Equals, 0)
 	c.Assert(bufferString(ctx.Stdout), gc.Equals, "success!\n")
@@ -97,7 +87,7 @@ func (s *CmdSuite) TestMainSuccess(c *gc.C) {
 
 func (s *CmdSuite) TestStdin(c *gc.C) {
 	const phrase = "Do you, Juju?"
-	ctx := testing.Context(c)
+	ctx := cmdtesting.Context(c)
 	ctx.Stdin = bytes.NewBuffer([]byte(phrase))
 	result := cmd.Main(&TestCommand{Name: "verb"}, ctx, []string{"--option", "echo"})
 	c.Assert(result, gc.Equals, 0)
@@ -107,7 +97,7 @@ func (s *CmdSuite) TestStdin(c *gc.C) {
 
 func (s *CmdSuite) TestMainHelp(c *gc.C) {
 	for _, arg := range []string{"-h", "--help"} {
-		ctx := testing.Context(c)
+		ctx := cmdtesting.Context(c)
 		result := cmd.Main(&TestCommand{Name: "verb"}, ctx, []string{arg})
 		c.Assert(result, gc.Equals, 0)
 		c.Assert(bufferString(ctx.Stdout), gc.Equals, fullHelp)
@@ -116,7 +106,7 @@ func (s *CmdSuite) TestMainHelp(c *gc.C) {
 }
 
 func (s *CmdSuite) TestDefaultContextReturnsErrorInDeletedDirectory(c *gc.C) {
-	ctx := testing.Context(c)
+	ctx := cmdtesting.Context(c)
 	wd, err := os.Getwd()
 	c.Assert(err, gc.IsNil)
 	missing := ctx.Dir + "/missing"

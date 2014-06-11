@@ -12,8 +12,6 @@ import (
 
 	"github.com/juju/loggo"
 	"launchpad.net/gnuflag"
-
-	"github.com/juju/juju/version"
 )
 
 var logger = loggo.GetLogger("juju.cmd")
@@ -41,13 +39,23 @@ type MissingCallback func(ctx *Context, subcommand string, args []string) error
 // SuperCommandParams provides a way to have default parameter to the
 // `NewSuperCommand` call.
 type SuperCommandParams struct {
-	UsagePrefix     string
+	// UsagePrefix should be set when the SuperCommand is
+	// actually a subcommand of some other SuperCommand;
+	// if NotifyRun is called, it name will be prefixed accordingly,
+	// unless UsagePrefix is identical to Name.
+	UsagePrefix string
+
+	// Notify, if not nil, is called when the SuperCommand
+	// is about to run a sub-command.
+	NotifyRun func(cmdName string)
+
 	Name            string
 	Purpose         string
 	Doc             string
 	Log             *Log
 	MissingCallback MissingCallback
 	Aliases         []string
+	Version         string
 }
 
 // NewSuperCommand creates and initializes a new `SuperCommand`, and returns
@@ -61,6 +69,8 @@ func NewSuperCommand(params SuperCommandParams) *SuperCommand {
 		usagePrefix:     params.UsagePrefix,
 		missingCallback: params.MissingCallback,
 		Aliases:         params.Aliases,
+		version:         params.Version,
+		notifyRun:       params.NotifyRun,
 	}
 	command.init()
 	return command
@@ -77,6 +87,7 @@ type SuperCommand struct {
 	Doc             string
 	Log             *Log
 	Aliases         []string
+	version         string
 	usagePrefix     string
 	subcmds         map[string]Command
 	commonflags     *gnuflag.FlagSet
@@ -86,6 +97,7 @@ type SuperCommand struct {
 	showDescription bool
 	showVersion     bool
 	missingCallback MissingCallback
+	notifyRun       func(string)
 }
 
 // IsSuperCommand implements Command.IsSuperCommand
@@ -93,8 +105,6 @@ func (c *SuperCommand) IsSuperCommand() bool {
 	return true
 }
 
-// Because Go doesn't have constructors that initialize the object into a
-// ready state.
 func (c *SuperCommand) init() {
 	if c.subcmds != nil {
 		return
@@ -103,8 +113,9 @@ func (c *SuperCommand) init() {
 		super: c,
 	}
 	help.init()
-	c.subcmds = map[string]Command{
-		"help": help,
+	c.subcmds = map[string]Command{"help": help}
+	if c.version != "" {
+		c.subcmds["version"] = newVersionCommand(c.version)
 	}
 }
 
@@ -222,8 +233,10 @@ func (c *SuperCommand) SetFlags(f *gnuflag.FlagSet) {
 	c.SetCommonFlags(f)
 	// Only flags set by SetCommonFlags are passed on to subcommands.
 	// Any flags added below only take effect when no subcommand is
-	// specified (e.g. juju --version).
-	f.BoolVar(&c.showVersion, "version", false, "Show the version of juju")
+	// specified (e.g. command --version).
+	if c.version != "" {
+		f.BoolVar(&c.showVersion, "version", false, "Show the command's version and exit")
+	}
 	c.flags = f
 }
 
@@ -298,10 +311,12 @@ func (c *SuperCommand) Run(ctx *Context) error {
 			return err
 		}
 	}
-	if c.usagePrefix == "" || c.usagePrefix == c.Name {
-		logger.Infof("running %s [%s %s]", c.Name, version.Current, version.Compiler)
-	} else {
-		logger.Infof("running %s %s [%s %s]", c.usagePrefix, c.Name, version.Current, version.Compiler)
+	if c.notifyRun != nil {
+		name := c.Name
+		if c.usagePrefix != "" && c.usagePrefix != name{
+			name = c.usagePrefix + " " + name
+		}
+		c.notifyRun(name)
 	}
 	err := c.subcmd.Run(ctx)
 	if err != nil && err != ErrSilent {
@@ -446,7 +461,7 @@ func (c *helpCommand) Init(args []string) error {
 
 func (c *helpCommand) Run(ctx *Context) error {
 	if c.super.showVersion {
-		var v VersionCommand
+		v := newVersionCommand(c.super.version)
 		v.SetFlags(c.super.flags)
 		v.Init(nil)
 		return v.Run(ctx)

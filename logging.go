@@ -11,8 +11,6 @@ import (
 
 	"github.com/juju/loggo"
 	"launchpad.net/gnuflag"
-
-	"github.com/juju/juju/juju/osenv"
 )
 
 // WriterFactory defines the single method to create a new
@@ -24,6 +22,9 @@ type WriterFactory interface {
 // Log supplies the necessary functionality for Commands that wish to set up
 // logging.
 type Log struct {
+	// If DefaultConfig is set, it will be used for the
+	// default logging configuration.
+	DefaultConfig string
 	Path    string
 	Verbose bool
 	Quiet   bool
@@ -49,8 +50,7 @@ func (l *Log) AddFlags(f *gnuflag.FlagSet) {
 	f.BoolVar(&l.Quiet, "q", false, "show no informational output")
 	f.BoolVar(&l.Quiet, "quiet", false, "show no informational output")
 	f.BoolVar(&l.Debug, "debug", false, "equivalent to --show-log --log-config=<root>=DEBUG")
-	defaultLogConfig := os.Getenv(osenv.JujuLoggingConfigEnvKey)
-	f.StringVar(&l.Config, "logging-config", defaultLogConfig, "specify log levels for modules")
+	f.StringVar(&l.Config, "logging-config", l.DefaultConfig, "specify log levels for modules")
 	f.BoolVar(&l.ShowLog, "show-log", false, "if set, write the log file to stderr")
 }
 
