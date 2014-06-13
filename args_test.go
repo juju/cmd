@@ -11,7 +11,7 @@ import (
 	"launchpad.net/gnuflag"
 	gc "launchpad.net/gocheck"
 
-	"github.com/juju/juju/cmd"
+	"github.com/juju/cmd"
 )
 
 type ArgsSuite struct {

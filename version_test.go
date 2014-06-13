@@ -8,8 +8,6 @@ import (
 	"fmt"
 
 	gc "launchpad.net/gocheck"
-
-	"github.com/juju/juju/version"
 )
 
 type VersionSuite struct{}
@@ -22,10 +20,11 @@ func (s *VersionSuite) TestVersion(c *gc.C) {
 		Stdout: &stdout,
 		Stderr: &stderr,
 	}
-	code := Main(&VersionCommand{}, ctx, nil)
+	const version = "999.888.777"
+	code := Main(newVersionCommand(version), ctx, nil)
 	c.Check(code, gc.Equals, 0)
 	c.Assert(stderr.String(), gc.Equals, "")
-	c.Assert(stdout.String(), gc.Equals, version.Current.String()+"\n")
+	c.Assert(stdout.String(), gc.Equals, version+"\n")
 }
 
 func (s *VersionSuite) TestVersionExtraArgs(c *gc.C) {
@@ -34,7 +33,7 @@ func (s *VersionSuite) TestVersionExtraArgs(c *gc.C) {
 		Stdout: &stdout,
 		Stderr: &stderr,
 	}
-	code := Main(&VersionCommand{}, ctx, []string{"foo"})
+	code := Main(newVersionCommand("xxx"), ctx, []string{"foo"})
 	c.Check(code, gc.Equals, 2)
 	c.Assert(stdout.String(), gc.Equals, "")
 	c.Assert(stderr.String(), gc.Matches, "error: unrecognized args.*\n")
@@ -46,8 +45,9 @@ func (s *VersionSuite) TestVersionJson(c *gc.C) {
 		Stdout: &stdout,
 		Stderr: &stderr,
 	}
-	code := Main(&VersionCommand{}, ctx, []string{"--format", "json"})
+	const version = "999.888.777"
+	code := Main(newVersionCommand(version), ctx, []string{"--format", "json"})
 	c.Check(code, gc.Equals, 0)
 	c.Assert(stderr.String(), gc.Equals, "")
-	c.Assert(stdout.String(), gc.Equals, fmt.Sprintf("%q\n", version.Current.String()))
+	c.Assert(stdout.String(), gc.Equals, fmt.Sprintf("%q\n", version))
 }
