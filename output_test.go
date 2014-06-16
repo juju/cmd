@@ -79,7 +79,6 @@ var outputTests = map[string][]struct {
 		{"foo: bar", "foo: bar\n"},
 		{[]string{}, ""},
 		{[]string{"blam", "dink"}, "blam\ndink\n"},
-		{[2]string{"blam", "dink"}, "blam\ndink\n"},
 		{map[interface{}]interface{}{"foo": "bar"}, "foo: bar\n"},
 	},
 	"json": {
