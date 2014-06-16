@@ -54,7 +54,13 @@ func FormatSmart(value interface{}) ([]byte, error) {
 	switch kind := v.Kind(); kind {
 	case reflect.String:
 		return []byte(value.(string)), nil
-	case reflect.Array, reflect.Slice:
+	case reflect.Array:
+		if v.Type().Elem().Kind() == reflect.String {
+			slice := reflect.MakeSlice(reflect.TypeOf([]string(nil)), v.Len(), v.Len())
+			reflect.Copy(slice, v)
+			return []byte(strings.Join(slice.Interface().([]string), "\n")), nil
+		}
+	case reflect.Slice:
 		if v.Type().Elem().Kind() == reflect.String {
 			return []byte(strings.Join(value.([]string), "\n")), nil
 		}
