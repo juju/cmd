@@ -49,7 +49,7 @@ func (l *Log) AddFlags(f *gnuflag.FlagSet) {
 	f.BoolVar(&l.Verbose, "verbose", false, "show more verbose output")
 	f.BoolVar(&l.Quiet, "q", false, "show no informational output")
 	f.BoolVar(&l.Quiet, "quiet", false, "show no informational output")
-	f.BoolVar(&l.Debug, "debug", false, "equivalent to --show-log --log-config=<root>=DEBUG")
+	f.BoolVar(&l.Debug, "debug", false, "equivalent to --show-log --logging-config=<root>=DEBUG")
 	f.StringVar(&l.Config, "logging-config", l.DefaultConfig, "specify log levels for modules")
 	f.BoolVar(&l.ShowLog, "show-log", false, "if set, write the log file to stderr")
 }
