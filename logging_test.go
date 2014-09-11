@@ -9,7 +9,7 @@ import (
 
 	"github.com/juju/loggo"
 	"github.com/juju/testing"
-	gc "launchpad.net/gocheck"
+	gc "gopkg.in/check.v1"
 	"github.com/juju/cmd/cmdtesting"
 
 	"github.com/juju/cmd"

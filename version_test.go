@@ -7,7 +7,7 @@ import (
 	"bytes"
 	"fmt"
 
-	gc "launchpad.net/gocheck"
+	gc "gopkg.in/check.v1"
 )
 
 type VersionSuite struct{}
