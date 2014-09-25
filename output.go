@@ -12,8 +12,8 @@ import (
 	"sort"
 	"strings"
 
-	"launchpad.net/gnuflag"
 	goyaml "gopkg.in/yaml.v1"
+	"launchpad.net/gnuflag"
 )
 
 // Formatter converts an arbitrary object into a []byte.

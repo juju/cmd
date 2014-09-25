@@ -8,8 +8,8 @@ import (
 	"io/ioutil"
 
 	"github.com/juju/testing"
-	"launchpad.net/gnuflag"
 	gc "gopkg.in/check.v1"
+	"launchpad.net/gnuflag"
 
 	"github.com/juju/cmd"
 )

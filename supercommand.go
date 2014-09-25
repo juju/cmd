@@ -313,7 +313,7 @@ func (c *SuperCommand) Run(ctx *Context) error {
 	}
 	if c.notifyRun != nil {
 		name := c.Name
-		if c.usagePrefix != "" && c.usagePrefix != name{
+		if c.usagePrefix != "" && c.usagePrefix != name {
 			name = c.usagePrefix + " " + name
 		}
 		c.notifyRun(name)

@@ -25,13 +25,13 @@ type Log struct {
 	// If DefaultConfig is set, it will be used for the
 	// default logging configuration.
 	DefaultConfig string
-	Path    string
-	Verbose bool
-	Quiet   bool
-	Debug   bool
-	ShowLog bool
-	Config  string
-	Factory WriterFactory
+	Path          string
+	Verbose       bool
+	Quiet         bool
+	Debug         bool
+	ShowLog       bool
+	Config        string
+	Factory       WriterFactory
 }
 
 // GetLogWriter returns a logging writer for the specified target.

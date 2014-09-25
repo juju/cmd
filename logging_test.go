@@ -7,10 +7,10 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
+	"github.com/juju/cmd/cmdtesting"
 	"github.com/juju/loggo"
 	"github.com/juju/testing"
 	gc "gopkg.in/check.v1"
-	"github.com/juju/cmd/cmdtesting"
 
 	"github.com/juju/cmd"
 )

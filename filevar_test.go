@@ -10,8 +10,8 @@ import (
 
 	gitjujutesting "github.com/juju/testing"
 	"github.com/juju/utils"
-	"launchpad.net/gnuflag"
 	gc "gopkg.in/check.v1"
+	"launchpad.net/gnuflag"
 
 	"github.com/juju/cmd"
 	"github.com/juju/cmd/cmdtesting"

@@ -10,7 +10,7 @@ import (
 // versionCommand is a cmd.Command that prints the current version.
 type versionCommand struct {
 	CommandBase
-	out   Output
+	out     Output
 	version string
 }
 

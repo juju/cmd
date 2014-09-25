@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	gitjujutesting "github.com/juju/testing"
-	"launchpad.net/gnuflag"
 	gc "gopkg.in/check.v1"
+	"launchpad.net/gnuflag"
 
 	"github.com/juju/cmd"
 	"github.com/juju/cmd/cmdtesting"
@@ -213,8 +213,8 @@ func (s *SuperCommandSuite) TestLogging(c *gc.C) {
 func (s *SuperCommandSuite) TestNotifyRun(c *gc.C) {
 	notifyTests := []struct {
 		usagePrefix string
-		name string
-		expectName string
+		name        string
+		expectName  string
 	}{
 		{"juju", "juju", "juju"},
 		{"something", "else", "something else"},
