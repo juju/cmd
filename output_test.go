@@ -5,7 +5,7 @@ package cmd_test
 
 import (
 	"launchpad.net/gnuflag"
-	gc "launchpad.net/gocheck"
+	gc "gopkg.in/check.v1"
 
 	"github.com/juju/cmd"
 	"github.com/juju/cmd/cmdtesting"
