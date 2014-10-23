@@ -478,6 +478,9 @@ func (c *helpCommand) Run(ctx *Context) error {
 			c.super.subcmd = nil
 
 			info := c.super.Info()
+			if c.super.usagePrefix != "" {
+				info.Name = fmt.Sprintf("%s %s", c.super.usagePrefix, info.Name)
+			}
 			f := gnuflag.NewFlagSet(info.Name, gnuflag.ContinueOnError)
 			c.SetFlags(f)
 			ctx.Stdout.Write(info.Help(f))
