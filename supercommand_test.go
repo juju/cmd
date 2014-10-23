@@ -256,17 +256,37 @@ func (s *SuperCommandSuite) TestHelp(c *gc.C) {
 	code := cmd.Main(jc, ctx, []string{"blah", "--help"})
 	c.Assert(code, gc.Equals, 0)
 	stripped := strings.Replace(bufferString(ctx.Stdout), "\n", "", -1)
-	c.Assert(stripped, gc.Matches, ".*usage: jujutest blah.*blah-doc.*")
+	c.Assert(stripped, gc.Matches, "usage: jujutest blah.*blah-doc.*")
 }
 
 func (s *SuperCommandSuite) TestHelpWithPrefix(c *gc.C) {
 	jc := cmd.NewSuperCommand(cmd.SuperCommandParams{Name: "jujutest", UsagePrefix: "juju"})
 	jc.Register(&TestCommand{Name: "blah"})
 	ctx := cmdtesting.Context(c)
+	code := cmd.Main(jc, ctx, []string{"help"})
+	c.Assert(code, gc.Equals, 0)
+	stripped := strings.Replace(bufferString(ctx.Stdout), "\n", "", -1)
+	c.Assert(stripped, gc.Matches, "usage: juju jujutest <command> ...*")
+}
+
+func (s *SuperCommandSuite) TestHelpWithPrefixFlag(c *gc.C) {
+	jc := cmd.NewSuperCommand(cmd.SuperCommandParams{Name: "jujutest", UsagePrefix: "juju"})
+	jc.Register(&TestCommand{Name: "blah"})
+	ctx := cmdtesting.Context(c)
 	code := cmd.Main(jc, ctx, []string{"blah", "--help"})
 	c.Assert(code, gc.Equals, 0)
 	stripped := strings.Replace(bufferString(ctx.Stdout), "\n", "", -1)
-	c.Assert(stripped, gc.Matches, ".*usage: juju jujutest blah.*blah-doc.*")
+	c.Assert(stripped, gc.Matches, "usage: juju jujutest blah.*blah-doc.*")
+}
+
+func (s *SuperCommandSuite) TestHelpWithPrefixCommand(c *gc.C) {
+	jc := cmd.NewSuperCommand(cmd.SuperCommandParams{Name: "jujutest", UsagePrefix: "juju"})
+	jc.Register(&TestCommand{Name: "blah"})
+	ctx := cmdtesting.Context(c)
+	code := cmd.Main(jc, ctx, []string{"help", "blah"})
+	c.Assert(code, gc.Equals, 0)
+	stripped := strings.Replace(bufferString(ctx.Stdout), "\n", "", -1)
+	c.Assert(stripped, gc.Matches, "usage: juju jujutest blah.*blah-doc.*")
 }
 
 func NewSuperWithCallback(callback func(*cmd.Context, string, []string) error) cmd.Command {
