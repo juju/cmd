@@ -76,6 +76,26 @@ func NewSuperCommand(params SuperCommandParams) *SuperCommand {
 	return command
 }
 
+// DeprecationCheck is used to provide callbacks to determine if
+// the command is deprecated or obsolete.
+type DeprecationCheck interface {
+	// Deprecated aliases emit a warning when executed.
+	// If the command is deprecated, the second parameter recommends
+	// what to use instead.
+	Deprecated() (bool, string)
+	// Obsolete aliases are not actually registered. The purpose of this
+	// is to allow code to indicate ahead of time some way to determine
+	// that the command should stop working.
+	Obsolete() bool
+}
+
+type commandReference struct {
+	name    string
+	command Command
+	alias   string
+	check   DeprecationCheck
+}
+
 // SuperCommand is a Command that selects a subcommand and assumes its
 // properties; any command line arguments that were not used in selecting
 // the subcommand are passed down to it, and to Run a SuperCommand is to run
@@ -89,10 +109,11 @@ type SuperCommand struct {
 	Aliases         []string
 	version         string
 	usagePrefix     string
-	subcmds         map[string]Command
+	subcmds         map[string]commandReference
+	help            *helpCommand
 	commonflags     *gnuflag.FlagSet
 	flags           *gnuflag.FlagSet
-	subcmd          Command
+	action          commandReference
 	showHelp        bool
 	showDescription bool
 	showVersion     bool
@@ -109,13 +130,17 @@ func (c *SuperCommand) init() {
 	if c.subcmds != nil {
 		return
 	}
-	help := &helpCommand{
+	c.help = &helpCommand{
 		super: c,
 	}
-	help.init()
-	c.subcmds = map[string]Command{"help": help}
+	c.help.init()
+	c.subcmds = map[string]commandReference{
+		"help": commandReference{command: c.help},
+	}
 	if c.version != "" {
-		c.subcmds["version"] = newVersionCommand(c.version)
+		c.subcmds["version"] = commandReference{
+			command: newVersionCommand(c.version),
+		}
 	}
 }
 
@@ -124,30 +149,78 @@ func (c *SuperCommand) init() {
 // 'help topics', and the full text is shown when the command 'help <name>' is
 // called.
 func (c *SuperCommand) AddHelpTopic(name, short, long string, aliases ...string) {
-	c.subcmds["help"].(*helpCommand).addTopic(name, short, echo(long), aliases...)
+	c.help.addTopic(name, short, echo(long), aliases...)
 }
 
 // AddHelpTopicCallback adds a new help topic with the description being the
 // short param, and the full text being defined by the callback function.
 func (c *SuperCommand) AddHelpTopicCallback(name, short string, longCallback func() string) {
-	c.subcmds["help"].(*helpCommand).addTopic(name, short, longCallback)
+	c.help.addTopic(name, short, longCallback)
 }
 
 // Register makes a subcommand available for use on the command line. The
 // command will be available via its own name, and via any supplied aliases.
 func (c *SuperCommand) Register(subcmd Command) {
 	info := subcmd.Info()
-	c.insert(info.Name, subcmd)
+	c.insert(info.Name, commandReference{name: info.Name, command: subcmd})
 	for _, name := range info.Aliases {
-		c.insert(name, subcmd)
+		c.insert(name, commandReference{name: name, command: subcmd, alias: info.Name})
 	}
 }
 
-func (c *SuperCommand) insert(name string, subcmd Command) {
-	if _, found := c.subcmds[name]; found || name == "help" {
-		panic(fmt.Sprintf("command already registered: %s", name))
+// RegisterAlias makes a subcommand available for use on the command line. The
+// command will be available via its own name, and via any supplied aliases.
+func (c *SuperCommand) RegisterAlias(name, forName string, check DeprecationCheck) {
+	if check != nil && check.Obsolete() {
+		logger.Infof("%q alias not registered as it is obsolete", name)
+		return
 	}
-	c.subcmds[name] = subcmd
+	action, found := c.subcmds[forName]
+	if !found {
+		panic(fmt.Sprintf("%q not found when registering alias", forName))
+	}
+	c.insert(name, commandReference{
+		name:    name,
+		command: action.command,
+		alias:   forName,
+		check:   check,
+	})
+}
+
+// RegisterAlias makes a subcommand available for use on the command line. The
+// command will be available via its own name, and via any supplied aliases.
+func (c *SuperCommand) RegisterSuperAlias(name, super, forName string, check DeprecationCheck) {
+	if check != nil && check.Obsolete() {
+		logger.Infof("%q alias not registered as it is obsolete", name)
+		return
+	}
+	action, found := c.subcmds[super]
+	if !found {
+		panic(fmt.Sprintf("%q not found when registering alias", super))
+	}
+	if !action.command.IsSuperCommand() {
+		panic(fmt.Sprintf("%q is not a SuperCommand", super))
+	}
+	superCmd := action.command.(*SuperCommand)
+
+	action, found = superCmd.subcmds[forName]
+	if !found {
+		panic(fmt.Sprintf("%q not found as a command in %q", forName, super))
+	}
+
+	c.insert(name, commandReference{
+		name:    name,
+		command: action.command,
+		alias:   super + " " + forName,
+		check:   check,
+	})
+}
+
+func (c *SuperCommand) insert(name string, value commandReference) {
+	if _, found := c.subcmds[name]; found {
+		panic(fmt.Sprintf("command already registered: %q", name))
+	}
+	c.subcmds[name] = value
 }
 
 // describeCommands returns a short description of each registered subcommand.
@@ -169,22 +242,27 @@ func (c *SuperCommand) describeCommands(simple bool) string {
 		i++
 	}
 	sort.Strings(cmds)
-	for i, name := range cmds {
-		info := c.subcmds[name].Info()
-		purpose := info.Purpose
-		if name != info.Name {
-			purpose = "alias for " + info.Name
+	var result []string
+	for _, name := range cmds {
+		action := c.subcmds[name]
+		if deprecated, _ := action.Deprecated(); deprecated {
+			continue
 		}
-		cmds[i] = fmt.Sprintf(lineFormat, longest, name, purpose)
+		info := action.command.Info()
+		purpose := info.Purpose
+		if action.alias != "" {
+			purpose = "alias for '" + action.alias + "'"
+		}
+		result = append(result, fmt.Sprintf(lineFormat, longest, name, purpose))
 	}
-	return fmt.Sprintf(outputFormat, strings.Join(cmds, "\n"))
+	return fmt.Sprintf(outputFormat, strings.Join(result, "\n"))
 }
 
 // Info returns a description of the currently selected subcommand, or of the
 // SuperCommand itself if no subcommand has been specified.
 func (c *SuperCommand) Info() *Info {
-	if c.subcmd != nil {
-		info := *c.subcmd.Info()
+	if c.action.command != nil {
+		info := *c.action.command.Info()
 		info.Name = fmt.Sprintf("%s %s", c.Name, info.Name)
 		return &info
 	}
@@ -254,19 +332,21 @@ func (c *SuperCommand) Init(args []string) error {
 		return CheckEmpty(args)
 	}
 	if len(args) == 0 {
-		c.subcmd = c.subcmds["help"]
+		c.action = c.subcmds["help"]
 		return nil
 	}
 
 	found := false
 	// Look for the command.
-	if c.subcmd, found = c.subcmds[args[0]]; !found {
+	if c.action, found = c.subcmds[args[0]]; !found {
 		if c.missingCallback != nil {
-			c.subcmd = &missingCommand{
-				callback:  c.missingCallback,
-				superName: c.Name,
-				name:      args[0],
-				args:      args[1:],
+			c.action = commandReference{
+				command: &missingCommand{
+					callback:  c.missingCallback,
+					superName: c.Name,
+					name:      args[0],
+					args:      args[1:],
+				},
 			}
 			// Yes return here, no Init called on missing Command.
 			return nil
@@ -274,23 +354,24 @@ func (c *SuperCommand) Init(args []string) error {
 		return fmt.Errorf("unrecognized command: %s %s", c.Name, args[0])
 	}
 	args = args[1:]
-	if c.subcmd.IsSuperCommand() {
+	subcmd := c.action.command
+	if subcmd.IsSuperCommand() {
 		f := gnuflag.NewFlagSet(c.Info().Name, gnuflag.ContinueOnError)
 		f.SetOutput(ioutil.Discard)
-		c.subcmd.SetFlags(f)
+		subcmd.SetFlags(f)
 	} else {
-		c.subcmd.SetFlags(c.commonflags)
+		subcmd.SetFlags(c.commonflags)
 	}
-	if err := c.commonflags.Parse(c.subcmd.AllowInterspersedFlags(), args); err != nil {
+	if err := c.commonflags.Parse(subcmd.AllowInterspersedFlags(), args); err != nil {
 		return err
 	}
 	args = c.commonflags.Args()
 	if c.showHelp {
 		// We want to treat help for the command the same way we would if we went "help foo".
-		args = []string{c.subcmd.Info().Name}
-		c.subcmd = c.subcmds["help"]
+		args = []string{c.action.name}
+		c.action = c.subcmds["help"]
 	}
-	return c.subcmd.Init(args)
+	return c.action.command.Init(args)
 }
 
 // Run executes the subcommand that was selected in Init.
@@ -303,7 +384,7 @@ func (c *SuperCommand) Run(ctx *Context) error {
 		}
 		return nil
 	}
-	if c.subcmd == nil {
+	if c.action.command == nil {
 		panic("Run: missing subcommand; Init failed or not called")
 	}
 	if c.Log != nil {
@@ -318,7 +399,10 @@ func (c *SuperCommand) Run(ctx *Context) error {
 		}
 		c.notifyRun(name)
 	}
-	err := c.subcmd.Run(ctx)
+	if deprecated, replacement := c.action.Deprecated(); deprecated {
+		ctx.Infof("WARNING: %q is deprecated, please use %q", c.action.name, replacement)
+	}
+	err := c.action.command.Run(ctx)
 	if err != nil && err != ErrSilent {
 		logger.Errorf("%v", err)
 		// Now that this has been logged, don't log again in cmd.Main.
@@ -473,9 +557,9 @@ func (c *helpCommand) Run(ctx *Context) error {
 			c.topic = "basics"
 		} else {
 			// At this point, "help" is selected as the SuperCommand's
-			// sub-command, but we want the info to be printed
+			// current action, but we want the info to be printed
 			// as if there was nothing selected.
-			c.super.subcmd = nil
+			c.super.action.command = nil
 
 			info := c.super.Info()
 			if c.super.usagePrefix != "" {
@@ -488,9 +572,14 @@ func (c *helpCommand) Run(ctx *Context) error {
 		}
 	}
 	// If the topic is a registered subcommand, then run the help command with it
-	if helpcmd, ok := c.super.subcmds[c.topic]; ok {
+	if helpAction, ok := c.super.subcmds[c.topic]; ok {
+		helpcmd := helpAction.command
 		info := helpcmd.Info()
-		info.Name = fmt.Sprintf("%s %s", c.super.Name, info.Name)
+		if helpAction.alias == "" {
+			info.Name = fmt.Sprintf("%s %s", c.super.Name, info.Name)
+		} else {
+			info.Name = fmt.Sprintf("%s %s", c.super.Name, helpAction.alias)
+		}
 		if c.super.usagePrefix != "" {
 			info.Name = fmt.Sprintf("%s %s", c.super.usagePrefix, info.Name)
 		}
@@ -511,17 +600,26 @@ func (c *helpCommand) Run(ctx *Context) error {
 		if len(c.topicArgs) > 0 {
 			helpArgs = append(helpArgs, c.topicArgs...)
 		}
-		subcmd := &missingCommand{
+		command := &missingCommand{
 			callback:  c.super.missingCallback,
 			superName: c.super.Name,
 			name:      c.topic,
 			args:      helpArgs,
 		}
-		err := subcmd.Run(ctx)
+		err := command.Run(ctx)
 		_, isUnrecognized := err.(*UnrecognizedCommand)
 		if !isUnrecognized {
 			return err
 		}
 	}
 	return fmt.Errorf("unknown command or topic for %s", c.topic)
+}
+
+// Deprecated calls into the check interface if one was specified,
+// otherwise it says the command isn't deprecated.
+func (r commandReference) Deprecated() (bool, string) {
+	if r.check == nil {
+		return false, ""
+	}
+	return r.check.Deprecated()
 }
