@@ -5,13 +5,6 @@
 
 
 
-## Constants
-``` go
-const (
-    ContainerSnippet     = "(/[a-z]+/" + names.NumberSnippet + ")"
-    ContainerSpecSnippet = "([a-z]+:)?"
-)
-```
 
 ## Variables
 ``` go
@@ -65,14 +58,6 @@ FormatSmart marshals value into a []byte according to the following rules:
 func FormatYaml(value interface{}) ([]byte, error)
 ```
 FormatYaml marshals value to a yaml-formatted []byte, unless value is nil.
-
-
-## func IsMachineOrNewContainer
-``` go
-func IsMachineOrNewContainer(spec string) bool
-```
-IsMachineOrNewContainer returns whether spec is a valid machine id
-or new container definition.
 
 
 ## func IsRcPassthroughError
@@ -337,6 +322,33 @@ func (ctx *Context) Verbosef(format string, params ...interface{})
 ```
 Verbosef will write the formatted string to Stderr if the verbose is true,
 and to the logger if not.
+
+
+
+## type DeprecationCheck
+``` go
+type DeprecationCheck interface {
+
+    // Deprecated aliases emit a warning when executed. If the command is
+    // deprecated, the second return value recommends what to use instead.
+    Deprecated() (bool, string)
+
+    // Obsolete aliases are not actually registered. The purpose of this
+    // is to allow code to indicate ahead of time some way to determine
+    // that the command should stop working.
+    Obsolete() bool
+}
+```
+DeprecationCheck is used to provide callbacks to determine if
+a command is deprecated or obsolete.
+
+
+
+
+
+
+
+
 
 
 
@@ -709,6 +721,24 @@ IsSuperCommand implements Command.IsSuperCommand
 func (c *SuperCommand) Register(subcmd Command)
 ```
 Register makes a subcommand available for use on the command line. The
+command will be available via its own name, and via any supplied aliases.
+
+
+
+### func (\*SuperCommand) RegisterAlias
+``` go
+func (c *SuperCommand) RegisterAlias(name, forName string, check DeprecationCheck)
+```
+RegisterAlias makes a subcommand available for use on the command line. The
+command will be available via its own name, and via any supplied aliases.
+
+
+
+### func (\*SuperCommand) RegisterSuperAlias
+``` go
+func (c *SuperCommand) RegisterSuperAlias(name, super, forName string, check DeprecationCheck)
+```
+RegisterAlias makes a subcommand available for use on the command line. The
 command will be available via its own name, and via any supplied aliases.
 
 

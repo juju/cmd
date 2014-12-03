@@ -415,6 +415,13 @@ func (s *SuperCommandSuite) TestRegisterAlias(c *gc.C) {
 		func() { jc.RegisterAlias("omg", "unknown", nil) },
 		gc.PanicMatches, `"unknown" not found when registering alias`)
 
+	info := jc.Info()
+	// NOTE: deprecated `bar` not shown in commands.
+	c.Assert(info.Doc, gc.Equals, `commands:
+    foo  - alias for 'test'
+    help - show help on a command or other topic
+    test - to be simple`)
+
 	for _, test := range []struct {
 		name   string
 		stdout string
@@ -443,14 +450,6 @@ func (s *SuperCommandSuite) TestRegisterAlias(c *gc.C) {
 		c.Check(cmdtesting.Stdout(ctx), gc.Equals, test.stdout)
 		c.Check(cmdtesting.Stderr(ctx), gc.Equals, test.stderr)
 	}
-
-	info := jc.Info()
-	// NOTE: deprecated `bar` not shown in commands.
-	c.Assert(info.Doc, gc.Equals, `commands:
-    foo  - alias for 'test'
-    help - show help on a command or other topic
-    test - to be simple`)
-
 }
 
 func (s *SuperCommandSuite) TestRegisterSuperAlias(c *gc.C) {

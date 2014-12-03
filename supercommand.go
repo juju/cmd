@@ -77,12 +77,13 @@ func NewSuperCommand(params SuperCommandParams) *SuperCommand {
 }
 
 // DeprecationCheck is used to provide callbacks to determine if
-// the command is deprecated or obsolete.
+// a command is deprecated or obsolete.
 type DeprecationCheck interface {
-	// Deprecated aliases emit a warning when executed.
-	// If the command is deprecated, the second parameter recommends
-	// what to use instead.
+
+	// Deprecated aliases emit a warning when executed. If the command is
+	// deprecated, the second return value recommends what to use instead.
 	Deprecated() (bool, string)
+
 	// Obsolete aliases are not actually registered. The purpose of this
 	// is to allow code to indicate ahead of time some way to determine
 	// that the command should stop working.
@@ -162,9 +163,9 @@ func (c *SuperCommand) AddHelpTopicCallback(name, short string, longCallback fun
 // command will be available via its own name, and via any supplied aliases.
 func (c *SuperCommand) Register(subcmd Command) {
 	info := subcmd.Info()
-	c.insert(info.Name, commandReference{name: info.Name, command: subcmd})
+	c.insert(commandReference{name: info.Name, command: subcmd})
 	for _, name := range info.Aliases {
-		c.insert(name, commandReference{name: name, command: subcmd, alias: info.Name})
+		c.insert(commandReference{name: name, command: subcmd, alias: info.Name})
 	}
 }
 
@@ -179,7 +180,7 @@ func (c *SuperCommand) RegisterAlias(name, forName string, check DeprecationChec
 	if !found {
 		panic(fmt.Sprintf("%q not found when registering alias", forName))
 	}
-	c.insert(name, commandReference{
+	c.insert(commandReference{
 		name:    name,
 		command: action.command,
 		alias:   forName,
@@ -208,7 +209,7 @@ func (c *SuperCommand) RegisterSuperAlias(name, super, forName string, check Dep
 		panic(fmt.Sprintf("%q not found as a command in %q", forName, super))
 	}
 
-	c.insert(name, commandReference{
+	c.insert(commandReference{
 		name:    name,
 		command: action.command,
 		alias:   super + " " + forName,
@@ -216,11 +217,11 @@ func (c *SuperCommand) RegisterSuperAlias(name, super, forName string, check Dep
 	})
 }
 
-func (c *SuperCommand) insert(name string, value commandReference) {
-	if _, found := c.subcmds[name]; found {
-		panic(fmt.Sprintf("command already registered: %q", name))
+func (c *SuperCommand) insert(value commandReference) {
+	if _, found := c.subcmds[value.name]; found {
+		panic(fmt.Sprintf("command already registered: %q", value.name))
 	}
-	c.subcmds[name] = value
+	c.subcmds[value.name] = value
 }
 
 // describeCommands returns a short description of each registered subcommand.
