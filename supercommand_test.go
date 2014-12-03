@@ -71,18 +71,18 @@ func (s *SuperCommandSuite) TestRegister(c *gc.C) {
 	jc.Register(&TestCommand{Name: "flip"})
 	jc.Register(&TestCommand{Name: "flap"})
 	badCall := func() { jc.Register(&TestCommand{Name: "flap"}) }
-	c.Assert(badCall, gc.PanicMatches, "command already registered: flap")
+	c.Assert(badCall, gc.PanicMatches, `command already registered: "flap"`)
 }
 
-func (s *SuperCommandSuite) TestRegisterAlias(c *gc.C) {
+func (s *SuperCommandSuite) TestAliasesRegistered(c *gc.C) {
 	jc := cmd.NewSuperCommand(cmd.SuperCommandParams{Name: "jujutest"})
 	jc.Register(&TestCommand{Name: "flip", Aliases: []string{"flap", "flop"}})
 
 	info := jc.Info()
 	c.Assert(info.Doc, gc.Equals, `commands:
-    flap - alias for flip
+    flap - alias for 'flip'
     flip - flip the juju
-    flop - alias for flip
+    flop - alias for 'flip'
     help - show help on a command or other topic`)
 }
 
@@ -362,5 +362,193 @@ func (s *SuperCommandSuite) TestSupercommandAliases(c *gc.C) {
 		c.Assert(code, gc.Equals, 0)
 		stripped := strings.Replace(bufferString(ctx.Stdout), "\n", "", -1)
 		c.Assert(stripped, gc.Matches, ".*usage: juju jujutest jubar.*aliases: jubaz, jubing")
+	}
+}
+
+type simple struct {
+	cmd.CommandBase
+	name string
+	args []string
+}
+
+var _ cmd.Command = (*simple)(nil)
+
+func (s *simple) Info() *cmd.Info {
+	return &cmd.Info{Name: s.name, Purpose: "to be simple"}
+}
+
+func (s *simple) Init(args []string) error {
+	s.args = args
+	return nil
+}
+
+func (s *simple) Run(ctx *cmd.Context) error {
+	fmt.Fprintf(ctx.Stdout, "%s %s\n", s.name, strings.Join(s.args, ", "))
+	return nil
+}
+
+type deprecate struct {
+	replacement string
+	obsolete    bool
+}
+
+func (d deprecate) Deprecated() (bool, string) {
+	if d.replacement == "" {
+		return false, ""
+	}
+	return true, d.replacement
+}
+func (d deprecate) Obsolete() bool {
+	return d.obsolete
+}
+
+func (s *SuperCommandSuite) TestRegisterAlias(c *gc.C) {
+	jc := cmd.NewSuperCommand(cmd.SuperCommandParams{
+		Name: "jujutest",
+	})
+	jc.Register(&simple{name: "test"})
+	jc.RegisterAlias("foo", "test", nil)
+	jc.RegisterAlias("bar", "test", deprecate{replacement: "test"})
+	jc.RegisterAlias("baz", "test", deprecate{obsolete: true})
+
+	c.Assert(
+		func() { jc.RegisterAlias("omg", "unknown", nil) },
+		gc.PanicMatches, `"unknown" not found when registering alias`)
+
+	info := jc.Info()
+	// NOTE: deprecated `bar` not shown in commands.
+	c.Assert(info.Doc, gc.Equals, `commands:
+    foo  - alias for 'test'
+    help - show help on a command or other topic
+    test - to be simple`)
+
+	for _, test := range []struct {
+		name   string
+		stdout string
+		stderr string
+		code   int
+	}{
+		{
+			name:   "test",
+			stdout: "test arg\n",
+		}, {
+			name:   "foo",
+			stdout: "test arg\n",
+		}, {
+			name:   "bar",
+			stdout: "test arg\n",
+			stderr: "WARNING: \"bar\" is deprecated, please use \"test\"\n",
+		}, {
+			name:   "baz",
+			stderr: "error: unrecognized command: jujutest baz\n",
+			code:   2,
+		},
+	} {
+		ctx := cmdtesting.Context(c)
+		code := cmd.Main(jc, ctx, []string{test.name, "arg"})
+		c.Check(code, gc.Equals, test.code)
+		c.Check(cmdtesting.Stdout(ctx), gc.Equals, test.stdout)
+		c.Check(cmdtesting.Stderr(ctx), gc.Equals, test.stderr)
+	}
+}
+
+func (s *SuperCommandSuite) TestRegisterSuperAlias(c *gc.C) {
+	jc := cmd.NewSuperCommand(cmd.SuperCommandParams{
+		Name: "jujutest",
+	})
+	jc.Register(&simple{name: "test"})
+	sub := cmd.NewSuperCommand(cmd.SuperCommandParams{
+		Name:        "bar",
+		UsagePrefix: "jujutest",
+		Purpose:     "bar functions",
+	})
+	jc.Register(sub)
+	sub.Register(&simple{name: "foo"})
+
+	c.Assert(
+		func() { jc.RegisterSuperAlias("bar-foo", "unknown", "foo", nil) },
+		gc.PanicMatches, `"unknown" not found when registering alias`)
+	c.Assert(
+		func() { jc.RegisterSuperAlias("bar-foo", "test", "foo", nil) },
+		gc.PanicMatches, `"test" is not a SuperCommand`)
+	c.Assert(
+		func() { jc.RegisterSuperAlias("bar-foo", "bar", "unknown", nil) },
+		gc.PanicMatches, `"unknown" not found as a command in "bar"`)
+
+	jc.RegisterSuperAlias("bar-foo", "bar", "foo", nil)
+	jc.RegisterSuperAlias("bar-dep", "bar", "foo", deprecate{replacement: "bar foo"})
+	jc.RegisterSuperAlias("bar-ob", "bar", "foo", deprecate{obsolete: true})
+
+	info := jc.Info()
+	// NOTE: deprecated `bar` not shown in commands.
+	c.Assert(info.Doc, gc.Equals, `commands:
+    bar     - bar functions
+    bar-foo - alias for 'bar foo'
+    help    - show help on a command or other topic
+    test    - to be simple`)
+
+	for _, test := range []struct {
+		args   []string
+		stdout string
+		stderr string
+		code   int
+	}{
+		{
+			args:   []string{"bar", "foo", "arg"},
+			stdout: "foo arg\n",
+		}, {
+			args:   []string{"bar-foo", "arg"},
+			stdout: "foo arg\n",
+		}, {
+			args:   []string{"bar-dep", "arg"},
+			stdout: "foo arg\n",
+			stderr: "WARNING: \"bar-dep\" is deprecated, please use \"bar foo\"\n",
+		}, {
+			args:   []string{"bar-ob", "arg"},
+			stderr: "error: unrecognized command: jujutest bar-ob\n",
+			code:   2,
+		},
+	} {
+		ctx := cmdtesting.Context(c)
+		code := cmd.Main(jc, ctx, test.args)
+		c.Check(code, gc.Equals, test.code)
+		c.Check(cmdtesting.Stdout(ctx), gc.Equals, test.stdout)
+		c.Check(cmdtesting.Stderr(ctx), gc.Equals, test.stderr)
+	}
+}
+
+func (s *SuperCommandSuite) TestRegisterSuperAliasHelp(c *gc.C) {
+	jc := cmd.NewSuperCommand(cmd.SuperCommandParams{
+		Name: "jujutest",
+	})
+	sub := cmd.NewSuperCommand(cmd.SuperCommandParams{
+		Name:        "bar",
+		UsagePrefix: "jujutest",
+		Purpose:     "bar functions",
+	})
+	jc.Register(sub)
+	sub.Register(&simple{name: "foo"})
+
+	jc.RegisterSuperAlias("bar-foo", "bar", "foo", nil)
+
+	for _, test := range []struct {
+		args []string
+	}{
+		{
+			args: []string{"bar", "foo", "--help"},
+		}, {
+			args: []string{"bar", "help", "foo"},
+		}, {
+			args: []string{"help", "bar-foo"},
+		}, {
+			args: []string{"bar-foo", "--help"},
+		},
+	} {
+		c.Logf("args: %v", test.args)
+		ctx := cmdtesting.Context(c)
+		code := cmd.Main(jc, ctx, test.args)
+		c.Check(code, gc.Equals, 0)
+		help := "usage: jujutest bar foo\npurpose: to be simple\n"
+		c.Check(cmdtesting.Stdout(ctx), gc.Equals, help)
 	}
 }
