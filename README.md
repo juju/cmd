@@ -729,8 +729,9 @@ command will be available via its own name, and via any supplied aliases.
 ``` go
 func (c *SuperCommand) RegisterAlias(name, forName string, check DeprecationCheck)
 ```
-RegisterAlias makes a subcommand available for use on the command line. The
-command will be available via its own name, and via any supplied aliases.
+RegisterAlias makes an existing subcommand available under another name.
+If `check` is supplied, and the result of the `Obsolete` call is true,
+then the alias is not registered.
 
 
 
@@ -738,8 +739,10 @@ command will be available via its own name, and via any supplied aliases.
 ``` go
 func (c *SuperCommand) RegisterSuperAlias(name, super, forName string, check DeprecationCheck)
 ```
-RegisterAlias makes a subcommand available for use on the command line. The
-command will be available via its own name, and via any supplied aliases.
+RegisterSuperAlias makes a subcommand of a registered supercommand
+available under another name. This is useful when the command structure is
+being refactored.  If `check` is supplied, and the result of the `Obsolete`
+call is true, then the alias is not registered.
 
 
 
