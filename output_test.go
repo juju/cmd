@@ -4,6 +4,8 @@
 package cmd_test
 
 import (
+	"time"
+
 	gc "gopkg.in/check.v1"
 	"launchpad.net/gnuflag"
 
@@ -59,6 +61,7 @@ var outputTests = map[string][]struct {
 		{false, "False\n"},
 		{"hello", "hello\n"},
 		{"\n\n\n", "\n\n\n\n"},
+		{time.Date(2014, time.November, 27, 0, 0, 0, 0, time.UTC), "2014-11-27T00:00:00Z\n"},
 		{"foo: bar", "foo: bar\n"},
 		{[]string{"blam", "dink"}, "blam\ndink\n"},
 		{map[interface{}]interface{}{"foo": "bar"}, "foo: bar\n"},
@@ -73,6 +76,7 @@ var outputTests = map[string][]struct {
 		{false, "False\n"},
 		{"hello", "hello\n"},
 		{"\n\n\n", "\n\n\n\n"},
+		{time.Date(2014, time.November, 27, 0, 0, 0, 0, time.UTC), "2014-11-27T00:00:00Z\n"},
 		{"foo: bar", "foo: bar\n"},
 		{[]string{"blam", "dink"}, "blam\ndink\n"},
 		{[2]string{"blam", "dink"}, "blam\ndink\n"},
@@ -88,6 +92,7 @@ var outputTests = map[string][]struct {
 		{false, "false\n"},
 		{"hello", `"hello"` + "\n"},
 		{"\n\n\n", `"\n\n\n"` + "\n"},
+		{time.Date(2014, time.November, 27, 0, 0, 0, 0, time.UTC), `"2014-11-27T00:00:00Z"` + "\n"},
 		{"foo: bar", `"foo: bar"` + "\n"},
 		{[]string{}, `[]` + "\n"},
 		{[]string{"blam", "dink"}, `["blam","dink"]` + "\n"},
@@ -103,6 +108,7 @@ var outputTests = map[string][]struct {
 		{false, "false\n"},
 		{"hello", "hello\n"},
 		{"\n\n\n", "'\n\n\n\n'\n"},
+		{time.Date(2014, time.November, 27, 0, 0, 0, 0, time.UTC), "2014-11-27T00:00:00Z\n"},
 		{"foo: bar", "'foo: bar'\n"},
 		{[]string{"blam", "dink"}, "- blam\n- dink\n"},
 		{defaultValue, "juju: 1\npuppet: false\n"},
