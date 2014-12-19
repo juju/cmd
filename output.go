@@ -12,7 +12,7 @@ import (
 	"sort"
 	"strings"
 
-	goyaml "gopkg.in/yaml.v1"
+	goyaml "gopkg.in/yaml.v2"
 	"launchpad.net/gnuflag"
 )
 
@@ -72,6 +72,7 @@ func FormatSmart(value interface{}) ([]byte, error) {
 	case reflect.Map, reflect.Float32, reflect.Float64:
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+	case reflect.Struct:
 	default:
 		return nil, fmt.Errorf("cannot marshal %#v", value)
 	}
