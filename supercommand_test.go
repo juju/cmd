@@ -517,6 +517,71 @@ func (s *SuperCommandSuite) TestRegisterSuperAlias(c *gc.C) {
 	}
 }
 
+type simpleAlias struct {
+	simple
+}
+
+func (s *simpleAlias) Info() *cmd.Info {
+	return &cmd.Info{Name: s.name, Purpose: "to be simple with an alias",
+		Aliases: []string{s.name + "-alias"}}
+}
+
+func (s *SuperCommandSuite) TestRegisterDeprecated(c *gc.C) {
+	jc := cmd.NewSuperCommand(cmd.SuperCommandParams{
+		Name: "jujutest",
+	})
+
+	// Test that calling with a nil command will not panic
+	jc.RegisterDeprecated(nil, nil)
+
+	jc.RegisterDeprecated(&simpleAlias{simple{name: "test-non-dep"}}, nil)
+	jc.RegisterDeprecated(&simpleAlias{simple{name: "test-dep"}}, deprecate{replacement: "test-dep-new"})
+	jc.RegisterDeprecated(&simpleAlias{simple{name: "test-ob"}}, deprecate{obsolete: true})
+
+	badCall := func() {
+		jc.RegisterDeprecated(&simpleAlias{simple{name: "test-dep"}}, deprecate{replacement: "test-dep-new"})
+	}
+	c.Assert(badCall, gc.PanicMatches, `command already registered: "test-dep"`)
+
+	for _, test := range []struct {
+		args   []string
+		stdout string
+		stderr string
+		code   int
+	}{
+		{
+			args:   []string{"test-non-dep", "arg"},
+			stdout: "test-non-dep arg\n",
+		}, {
+			args:   []string{"test-non-dep-alias", "arg"},
+			stdout: "test-non-dep arg\n",
+		}, {
+			args:   []string{"test-dep", "arg"},
+			stdout: "test-dep arg\n",
+			stderr: "WARNING: \"test-dep\" is deprecated, please use \"test-dep-new\"\n",
+		}, {
+			args:   []string{"test-dep-alias", "arg"},
+			stdout: "test-dep arg\n",
+			stderr: "WARNING: \"test-dep-alias\" is deprecated, please use \"test-dep-new\"\n",
+		}, {
+			args:   []string{"test-ob", "arg"},
+			stderr: "error: unrecognized command: jujutest test-ob\n",
+			code:   2,
+		}, {
+			args:   []string{"test-ob-alias", "arg"},
+			stderr: "error: unrecognized command: jujutest test-ob-alias\n",
+			code:   2,
+		},
+	} {
+
+		ctx := cmdtesting.Context(c)
+		code := cmd.Main(jc, ctx, test.args)
+		c.Check(code, gc.Equals, test.code)
+		c.Check(cmdtesting.Stderr(ctx), gc.Equals, test.stderr)
+		c.Check(cmdtesting.Stdout(ctx), gc.Equals, test.stdout)
+	}
+}
+
 func (s *SuperCommandSuite) TestRegisterSuperAliasHelp(c *gc.C) {
 	jc := cmd.NewSuperCommand(cmd.SuperCommandParams{
 		Name: "jujutest",
