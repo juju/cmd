@@ -169,6 +169,25 @@ func (c *SuperCommand) Register(subcmd Command) {
 	}
 }
 
+// RegisterDeprecated makes a subcommand available for use on the command line if it
+// is not obsolete.  It inserts the command with the specified DeprecationCheck so
+// that a warning is displayed if the command is deprecated.
+func (c *SuperCommand) RegisterDeprecated(subcmd Command, check DeprecationCheck) {
+	if subcmd == nil {
+		return
+	}
+
+	info := subcmd.Info()
+	if check != nil && check.Obsolete() {
+		logger.Infof("%q command not registered as it is obsolete", info.Name)
+		return
+	}
+	c.insert(commandReference{name: info.Name, command: subcmd, check: check})
+	for _, name := range info.Aliases {
+		c.insert(commandReference{name: name, command: subcmd, alias: info.Name, check: check})
+	}
+}
+
 // RegisterAlias makes an existing subcommand available under another name.
 // If `check` is supplied, and the result of the `Obsolete` call is true,
 // then the alias is not registered.
