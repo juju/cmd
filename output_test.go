@@ -102,7 +102,7 @@ var outputTests = map[string][]struct {
 		{true, "true\n"},
 		{false, "false\n"},
 		{"hello", "hello\n"},
-		{"\n\n\n", "'\n\n\n\n'\n"},
+		{"\n\n\n", "|2+\n"},
 		{"foo: bar", "'foo: bar'\n"},
 		{[]string{"blam", "dink"}, "- blam\n- dink\n"},
 		{defaultValue, "juju: 1\npuppet: false\n"},
