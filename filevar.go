@@ -28,6 +28,10 @@ func (f *FileVar) Read(ctx *Context) ([]byte, error) {
 	if f.Path == "" {
 		return nil, ErrNoPath
 	}
+	if f.Path == "-" {
+		return ioutil.ReadAll(ctx.Stdin)
+	}
+
 	path, err := utils.NormalizePath(f.Path)
 	if err != nil {
 		return nil, err

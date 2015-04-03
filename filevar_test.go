@@ -41,7 +41,7 @@ func (s *FileVarSuite) SetUpTest(c *gc.C) {
 	c.Assert(err, gc.IsNil)
 }
 
-func (s *FileVarSuite) TestTildeFileVar(c *gc.C) {
+func (s *FileVarSuite) TestReadTilde(c *gc.C) {
 	path := filepath.Join(utils.Home(), "config.yaml")
 	err := ioutil.WriteFile(path, []byte("abc"), 0644)
 	c.Assert(err, gc.IsNil)
@@ -53,7 +53,17 @@ func (s *FileVarSuite) TestTildeFileVar(c *gc.C) {
 	c.Assert(string(file), gc.Equals, "abc")
 }
 
-func (s *FileVarSuite) TestValidFileVar(c *gc.C) {
+func (s *FileVarSuite) TestReadStdin(c *gc.C) {
+	s.ctx.Stdin = bytes.NewBufferString("abc")
+
+	var config cmd.FileVar
+	config.Set("-")
+	file, err := config.Read(s.ctx)
+	c.Assert(err, gc.IsNil)
+	c.Assert(string(file), gc.Equals, "abc")
+}
+
+func (s *FileVarSuite) TestReadValid(c *gc.C) {
 	fs, config := fs()
 	err := fs.Parse(false, []string{"--config", s.ValidPath})
 	c.Assert(err, gc.IsNil)
@@ -62,7 +72,7 @@ func (s *FileVarSuite) TestValidFileVar(c *gc.C) {
 	c.Assert(err, gc.IsNil)
 }
 
-func (s *FileVarSuite) TestInvalidFileVar(c *gc.C) {
+func (s *FileVarSuite) TestReadInvalid(c *gc.C) {
 	fs, config := fs()
 	err := fs.Parse(false, []string{"--config", s.InvalidPath})
 	c.Assert(config.Path, gc.Equals, s.InvalidPath)
