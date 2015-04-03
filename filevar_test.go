@@ -44,6 +44,46 @@ func (s *FileVarSuite) SetUpTest(c *gc.C) {
 	c.Assert(err, gc.IsNil)
 }
 
+func (s *FileVarSuite) TestSetStdin(c *gc.C) {
+	var config cmd.FileVar
+	c.Assert(config.Path, gc.Equals, "")
+	c.Assert(config.StdinMarkers, jc.DeepEquals, []string{})
+
+	config.SetStdin()
+	c.Assert(config.Path, gc.Equals, "")
+	c.Assert(config.StdinMarkers, jc.DeepEquals, []string{"-"})
+
+	config.SetStdin("<>", "@")
+	c.Assert(config.Path, gc.Equals, "")
+	c.Assert(config.StdinMarkers, jc.DeepEquals, []string{"<>", "@"})
+}
+
+func (s *FileVarSuite) TestIsStdin(c *gc.C) {
+	var config cmd.FileVar
+	c.Check(config.IsStdin(), jc.IsFalse)
+
+	config.StdinMarkers = []string{"-"}
+	c.Check(config.IsStdin(), jc.IsFalse)
+
+	config.Path = "spam"
+	c.Check(config.IsStdin(), jc.IsFalse)
+
+	config.Path = "-"
+	c.Check(config.IsStdin(), jc.IsTrue)
+
+	config.StdinMarkers = nil
+	c.Check(config.IsStdin(), jc.IsFalse)
+
+	config.StdinMarkers = []string{"<>", "@"}
+	c.Check(config.IsStdin(), jc.IsFalse)
+
+	config.Path = "<>"
+	c.Check(config.IsStdin(), jc.IsTrue)
+
+	config.Path = "@"
+	c.Check(config.IsStdin(), jc.IsTrue)
+}
+
 func (FileVarSuite) checkOpen(c *gc.C, file io.ReadCloser, expected string) {
 	defer file.Close()
 
@@ -69,10 +109,19 @@ func (s *FileVarSuite) TestOpenStdin(c *gc.C) {
 	s.ctx.Stdin = bytes.NewBufferString("abc")
 
 	var config cmd.FileVar
+	config.SetStdin()
 	config.Set("-")
 	file, err := config.Open(s.ctx)
 	c.Assert(err, gc.IsNil)
 	s.checkOpen(c, file, "abc")
+}
+
+func (s *FileVarSuite) TestOpenNotStdin(c *gc.C) {
+	var config cmd.FileVar
+	config.Set("-")
+	_, err := config.Open(s.ctx)
+
+	c.Check(err, jc.Satisfies, os.IsNotExist)
 }
 
 func (s *FileVarSuite) TestOpenValid(c *gc.C) {
@@ -108,10 +157,19 @@ func (s *FileVarSuite) TestReadStdin(c *gc.C) {
 	s.ctx.Stdin = bytes.NewBufferString("abc")
 
 	var config cmd.FileVar
+	config.SetStdin()
 	config.Set("-")
 	file, err := config.Read(s.ctx)
 	c.Assert(err, gc.IsNil)
 	c.Assert(string(file), gc.Equals, "abc")
+}
+
+func (s *FileVarSuite) TestReadNotStdin(c *gc.C) {
+	var config cmd.FileVar
+	config.Set("-")
+	_, err := config.Read(s.ctx)
+
+	c.Check(err, jc.Satisfies, os.IsNotExist)
 }
 
 func (s *FileVarSuite) TestReadValid(c *gc.C) {
