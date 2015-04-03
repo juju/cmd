@@ -4,11 +4,14 @@
 package cmd_test
 
 import (
+	"bytes"
+	"io"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 
 	gitjujutesting "github.com/juju/testing"
+	jc "github.com/juju/testing/checkers"
 	"github.com/juju/utils"
 	gc "gopkg.in/check.v1"
 	"launchpad.net/gnuflag"
@@ -39,6 +42,54 @@ func (s *FileVarSuite) SetUpTest(c *gc.C) {
 	f.Close()
 	err = os.Chmod(s.InvalidPath, 0) // make unreadable
 	c.Assert(err, gc.IsNil)
+}
+
+func (FileVarSuite) checkOpen(c *gc.C, file io.ReadCloser, expected string) {
+	defer file.Close()
+
+	data, err := ioutil.ReadAll(file)
+	c.Assert(err, jc.ErrorIsNil)
+	c.Check(string(data), gc.Equals, expected)
+}
+
+func (s *FileVarSuite) TestOpenTilde(c *gc.C) {
+	path := filepath.Join(utils.Home(), "config.yaml")
+	err := ioutil.WriteFile(path, []byte("abc"), 0644)
+	c.Assert(err, gc.IsNil)
+
+	var config cmd.FileVar
+	config.Set("~/config.yaml")
+	file, err := config.Open(s.ctx)
+	c.Assert(err, gc.IsNil)
+
+	s.checkOpen(c, file, "abc")
+}
+
+func (s *FileVarSuite) TestOpenStdin(c *gc.C) {
+	s.ctx.Stdin = bytes.NewBufferString("abc")
+
+	var config cmd.FileVar
+	config.Set("-")
+	file, err := config.Open(s.ctx)
+	c.Assert(err, gc.IsNil)
+	s.checkOpen(c, file, "abc")
+}
+
+func (s *FileVarSuite) TestOpenValid(c *gc.C) {
+	fs, config := fs()
+	err := fs.Parse(false, []string{"--config", s.ValidPath})
+	c.Assert(err, gc.IsNil)
+	c.Assert(config.Path, gc.Equals, s.ValidPath)
+	_, err = config.Open(s.ctx)
+	c.Assert(err, gc.IsNil)
+}
+
+func (s *FileVarSuite) TestOpenInvalid(c *gc.C) {
+	fs, config := fs()
+	err := fs.Parse(false, []string{"--config", s.InvalidPath})
+	c.Assert(config.Path, gc.Equals, s.InvalidPath)
+	_, err = config.Open(s.ctx)
+	c.Assert(err, gc.ErrorMatches, "*permission denied")
 }
 
 func (s *FileVarSuite) TestReadTilde(c *gc.C) {

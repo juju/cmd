@@ -5,7 +5,9 @@ package cmd
 
 import (
 	"errors"
+	"io"
 	"io/ioutil"
+	"os"
 
 	"github.com/juju/utils"
 )
@@ -21,6 +23,22 @@ var ErrNoPath = errors.New("path not set")
 func (f *FileVar) Set(v string) error {
 	f.Path = v
 	return nil
+}
+
+// Open opens the file.
+func (f *FileVar) Open(ctx *Context) (io.ReadCloser, error) {
+	if f.Path == "" {
+		return nil, ErrNoPath
+	}
+	if f.Path == "-" {
+		return ioutil.NopCloser(ctx.Stdin), nil
+	}
+
+	path, err := utils.NormalizePath(f.Path)
+	if err != nil {
+		return nil, err
+	}
+	return os.Open(ctx.AbsPath(path))
 }
 
 // Read returns the contents of the file.
