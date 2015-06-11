@@ -289,6 +289,20 @@ func (s *SuperCommandSuite) TestHelpWithPrefixCommand(c *gc.C) {
 	c.Assert(stripped, gc.Matches, "usage: juju jujutest blah.*blah-doc.*")
 }
 
+func (s *SuperCommandSuite) TestHelpMultipleSuperCommands(c *gc.C) {
+	level1 := cmd.NewSuperCommand(cmd.SuperCommandParams{Name: "level1"})
+	level2 := cmd.NewSuperCommand(cmd.SuperCommandParams{Name: "level2", UsagePrefix: "level1"})
+	level1.Register(level2)
+	level3 := cmd.NewSuperCommand(cmd.SuperCommandParams{Name: "level3", UsagePrefix: "level1 level2"})
+	level2.Register(level3)
+	level3.Register(&TestCommand{Name: "blah"})
+	ctx := cmdtesting.Context(c)
+	code := cmd.Main(level1, ctx, []string{"help", "level2", "level3", "blah"})
+	c.Assert(code, gc.Equals, 0)
+	stripped := strings.Replace(bufferString(ctx.Stdout), "\n", "", -1)
+	c.Assert(stripped, gc.Matches, "usage: level1 level2 level3 blah.*blah-doc.*")
+}
+
 func NewSuperWithCallback(callback func(*cmd.Context, string, []string) error) cmd.Command {
 	return cmd.NewSuperCommand(cmd.SuperCommandParams{
 		Name:            "jujutest",
