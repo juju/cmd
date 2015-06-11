@@ -105,6 +105,7 @@ See also: topics
 }
 
 func (c *helpCommand) Init(args []string) error {
+	logger.Tracef("helpCommand.Init: %#v", args)
 	if len(args) == 0 {
 		// If there is no help topic specified, print basic usage if it is
 		// there.
@@ -116,31 +117,31 @@ func (c *helpCommand) Init(args []string) error {
 
 	// Before we start walking down the subcommand list, we want to check
 	// to see if the first part is there.
-	topic, args := args[0], args[1:]
-	if _, ok := c.super.subcmds[topic]; !ok {
-		if c.super.missingCallback == nil {
+	if _, ok := c.super.subcmds[args[0]]; !ok {
+		if c.super.missingCallback == nil && len(args) > 1 {
 			return fmt.Errorf("extra arguments to command help: %q", args[1:])
 		}
-		c.topic = topic
-		c.topicArgs = args
+		logger.Tracef("help not found, setting topic")
+		c.topic, c.topicArgs = args[0], args[1:]
 		return nil
 	}
 
 	c.targetSuper = c.super
 	for len(args) > 0 {
-		if helpAction, ok := c.targetSuper.subcmds[topic]; ok {
+		c.topic, args = args[0], args[1:]
+		if helpAction, ok := c.targetSuper.subcmds[c.topic]; ok {
 			c.target = &helpAction
 			// If there are more args and the target isn't a super command
 			// error out.
+			logger.Tracef("target name: %s", c.target.name)
 			if super, ok := c.target.command.(*SuperCommand); ok {
 				c.targetSuper = super
 			} else if len(args) > 0 {
 				return fmt.Errorf("extra arguments to command help: %q", args)
 			}
 		} else {
-			return fmt.Errorf("subcommand %q not found", topic)
+			return fmt.Errorf("subcommand %q not found", c.topic)
 		}
-		topic, args = args[0], args[1:]
 	}
 	return nil
 }
@@ -149,6 +150,7 @@ func (c *helpCommand) getCommandHelp(super *SuperCommand, command Command, alias
 	info := command.Info()
 
 	if command != super {
+		logger.Tracef("command not super")
 		if alias == "" {
 			info.Name = fmt.Sprintf("%s %s", super.Name, info.Name)
 		} else {
@@ -156,6 +158,7 @@ func (c *helpCommand) getCommandHelp(super *SuperCommand, command Command, alias
 		}
 	}
 	if super.usagePrefix != "" {
+		logger.Tracef("adding super prefix")
 		info.Name = fmt.Sprintf("%s %s", super.usagePrefix, info.Name)
 	}
 	f := gnuflag.NewFlagSet(info.Name, gnuflag.ContinueOnError)

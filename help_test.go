@@ -6,6 +6,7 @@ package cmd_test
 import (
 	"strings"
 
+	"github.com/juju/loggo"
 	gitjujutesting "github.com/juju/testing"
 	gc "gopkg.in/check.v1"
 
@@ -19,6 +20,11 @@ type HelpCommandSuite struct {
 
 var _ = gc.Suite(&HelpCommandSuite{})
 
+func (s *HelpCommandSuite) SetUpTest(c *gc.C) {
+	s.IsolationSuite.SetUpTest(c)
+	loggo.GetLogger("juju.cmd").SetLogLevel(loggo.DEBUG)
+}
+
 func (s *HelpCommandSuite) TestSimple(c *gc.C) {
 	jc := cmd.NewSuperCommand(cmd.SuperCommandParams{Name: "jujutest"})
 	jc.Register(&TestCommand{Name: "blah"})
@@ -29,6 +35,18 @@ func (s *HelpCommandSuite) TestSimple(c *gc.C) {
 	c.Assert(stripped, gc.Matches, "usage: jujutest blah.*blah-doc.*")
 }
 
+func (s *HelpCommandSuite) TestHelpBasics(c *gc.C) {
+	jc := cmd.NewSuperCommand(cmd.SuperCommandParams{Name: "jujutest"})
+	jc.Register(&TestCommand{Name: "blah"})
+	jc.AddHelpTopic("basics", "short", "long help basics")
+
+	ctx := cmdtesting.Context(c)
+	code := cmd.Main(jc, ctx, []string{})
+	c.Assert(code, gc.Equals, 0)
+	stripped := strings.Replace(bufferString(ctx.Stdout), "\n", "", -1)
+	c.Assert(stripped, gc.Matches, "long help basics")
+}
+
 func (s *HelpCommandSuite) TestPrefix(c *gc.C) {
 	jc := cmd.NewSuperCommand(cmd.SuperCommandParams{Name: "jujutest", UsagePrefix: "juju"})
 	jc.Register(&TestCommand{Name: "blah"})
@@ -36,7 +54,7 @@ func (s *HelpCommandSuite) TestPrefix(c *gc.C) {
 	code := cmd.Main(jc, ctx, []string{"help"})
 	c.Assert(code, gc.Equals, 0)
 	stripped := strings.Replace(bufferString(ctx.Stdout), "\n", "", -1)
-	c.Assert(stripped, gc.Matches, "usage: juju jujutest <command> ...*")
+	c.Assert(stripped, gc.Matches, "usage: juju jujutest \\[options\\] <command> ...*")
 }
 
 func (s *HelpCommandSuite) TestPrefixFlag(c *gc.C) {

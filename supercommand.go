@@ -355,7 +355,7 @@ func (c *SuperCommand) Init(args []string) error {
 	}
 	if len(args) == 0 {
 		c.action = c.subcmds["help"]
-		return nil
+		return c.action.command.Init(args)
 	}
 
 	found := false
