@@ -541,39 +541,3 @@ func (s *SuperCommandSuite) TestRegisterDeprecated(c *gc.C) {
 		c.Check(cmdtesting.Stdout(ctx), gc.Equals, test.stdout)
 	}
 }
-
-func (s *SuperCommandSuite) TestRegisterSuperAliasHelp(c *gc.C) {
-	jc := cmd.NewSuperCommand(cmd.SuperCommandParams{
-		Name: "jujutest",
-	})
-	sub := cmd.NewSuperCommand(cmd.SuperCommandParams{
-		Name:        "bar",
-		UsagePrefix: "jujutest",
-		Purpose:     "bar functions",
-	})
-	jc.Register(sub)
-	sub.Register(&simple{name: "foo"})
-
-	jc.RegisterSuperAlias("bar-foo", "bar", "foo", nil)
-
-	for _, test := range []struct {
-		args []string
-	}{
-		{
-			args: []string{"bar", "foo", "--help"},
-		}, {
-			args: []string{"bar", "help", "foo"},
-		}, {
-			args: []string{"help", "bar-foo"},
-		}, {
-			args: []string{"bar-foo", "--help"},
-		},
-	} {
-		c.Logf("args: %v", test.args)
-		ctx := cmdtesting.Context(c)
-		code := cmd.Main(jc, ctx, test.args)
-		c.Check(code, gc.Equals, 0)
-		help := "usage: jujutest bar foo\npurpose: to be simple\n"
-		c.Check(cmdtesting.Stdout(ctx), gc.Equals, help)
-	}
-}

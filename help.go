@@ -151,6 +151,8 @@ func (c *helpCommand) getCommandHelp(super *SuperCommand, command Command, alias
 
 	if command != super {
 		logger.Tracef("command not super")
+		// If the alias is to a subcommand of another super command
+		// the alias string holds the "super sub" name.
 		if alias == "" {
 			info.Name = fmt.Sprintf("%s %s", super.Name, info.Name)
 		} else {

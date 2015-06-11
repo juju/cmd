@@ -57,6 +57,16 @@ func (s *HelpCommandSuite) TestPrefix(c *gc.C) {
 	c.Assert(stripped, gc.Matches, "usage: juju jujutest \\[options\\] <command> ...*")
 }
 
+func (s *HelpCommandSuite) TestAlias(c *gc.C) {
+	super := cmd.NewSuperCommand(cmd.SuperCommandParams{Name: "super"})
+	super.Register(&TestCommand{Name: "blah", Aliases: []string{"alias"}})
+	ctx := cmdtesting.Context(c)
+	code := cmd.Main(super, ctx, []string{"help", "alias"})
+	c.Assert(code, gc.Equals, 0)
+	stripped := strings.Replace(bufferString(ctx.Stdout), "\n", "", -1)
+	c.Assert(stripped, gc.Matches, "usage: super blah .*aliases: alias")
+}
+
 func (s *HelpCommandSuite) TestPrefixFlag(c *gc.C) {
 	jc := cmd.NewSuperCommand(cmd.SuperCommandParams{Name: "jujutest", UsagePrefix: "juju"})
 	jc.Register(&TestCommand{Name: "blah"})
