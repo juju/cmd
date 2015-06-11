@@ -129,18 +129,18 @@ func (c *helpCommand) Init(args []string) error {
 	c.targetSuper = c.super
 	for len(args) > 0 {
 		c.topic, args = args[0], args[1:]
-		if helpAction, ok := c.targetSuper.subcmds[c.topic]; ok {
-			c.target = &helpAction
-			// If there are more args and the target isn't a super command
-			// error out.
-			logger.Tracef("target name: %s", c.target.name)
-			if super, ok := c.target.command.(*SuperCommand); ok {
-				c.targetSuper = super
-			} else if len(args) > 0 {
-				return fmt.Errorf("extra arguments to command help: %q", args)
-			}
-		} else {
+		commandRef, ok := c.targetSuper.subcmds[c.topic]
+		if !ok {
 			return fmt.Errorf("subcommand %q not found", c.topic)
+		}
+		c.target = &commandRef
+		// If there are more args and the target isn't a super command
+		// error out.
+		logger.Tracef("target name: %s", c.target.name)
+		if super, ok := c.target.command.(*SuperCommand); ok {
+			c.targetSuper = super
+		} else if len(args) > 0 {
+			return fmt.Errorf("extra arguments to command help: %q", args)
 		}
 	}
 	return nil
