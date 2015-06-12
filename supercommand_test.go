@@ -249,46 +249,6 @@ func (s *SuperCommandSuite) TestDescription(c *gc.C) {
 	c.Assert(bufferString(ctx.Stdout), gc.Equals, "blow up the death star\n")
 }
 
-func (s *SuperCommandSuite) TestHelp(c *gc.C) {
-	jc := cmd.NewSuperCommand(cmd.SuperCommandParams{Name: "jujutest"})
-	jc.Register(&TestCommand{Name: "blah"})
-	ctx := cmdtesting.Context(c)
-	code := cmd.Main(jc, ctx, []string{"blah", "--help"})
-	c.Assert(code, gc.Equals, 0)
-	stripped := strings.Replace(bufferString(ctx.Stdout), "\n", "", -1)
-	c.Assert(stripped, gc.Matches, "usage: jujutest blah.*blah-doc.*")
-}
-
-func (s *SuperCommandSuite) TestHelpWithPrefix(c *gc.C) {
-	jc := cmd.NewSuperCommand(cmd.SuperCommandParams{Name: "jujutest", UsagePrefix: "juju"})
-	jc.Register(&TestCommand{Name: "blah"})
-	ctx := cmdtesting.Context(c)
-	code := cmd.Main(jc, ctx, []string{"help"})
-	c.Assert(code, gc.Equals, 0)
-	stripped := strings.Replace(bufferString(ctx.Stdout), "\n", "", -1)
-	c.Assert(stripped, gc.Matches, "usage: juju jujutest <command> ...*")
-}
-
-func (s *SuperCommandSuite) TestHelpWithPrefixFlag(c *gc.C) {
-	jc := cmd.NewSuperCommand(cmd.SuperCommandParams{Name: "jujutest", UsagePrefix: "juju"})
-	jc.Register(&TestCommand{Name: "blah"})
-	ctx := cmdtesting.Context(c)
-	code := cmd.Main(jc, ctx, []string{"blah", "--help"})
-	c.Assert(code, gc.Equals, 0)
-	stripped := strings.Replace(bufferString(ctx.Stdout), "\n", "", -1)
-	c.Assert(stripped, gc.Matches, "usage: juju jujutest blah.*blah-doc.*")
-}
-
-func (s *SuperCommandSuite) TestHelpWithPrefixCommand(c *gc.C) {
-	jc := cmd.NewSuperCommand(cmd.SuperCommandParams{Name: "jujutest", UsagePrefix: "juju"})
-	jc.Register(&TestCommand{Name: "blah"})
-	ctx := cmdtesting.Context(c)
-	code := cmd.Main(jc, ctx, []string{"help", "blah"})
-	c.Assert(code, gc.Equals, 0)
-	stripped := strings.Replace(bufferString(ctx.Stdout), "\n", "", -1)
-	c.Assert(stripped, gc.Matches, "usage: juju jujutest blah.*blah-doc.*")
-}
-
 func NewSuperWithCallback(callback func(*cmd.Context, string, []string) error) cmd.Command {
 	return cmd.NewSuperCommand(cmd.SuperCommandParams{
 		Name:            "jujutest",
@@ -579,41 +539,5 @@ func (s *SuperCommandSuite) TestRegisterDeprecated(c *gc.C) {
 		c.Check(code, gc.Equals, test.code)
 		c.Check(cmdtesting.Stderr(ctx), gc.Equals, test.stderr)
 		c.Check(cmdtesting.Stdout(ctx), gc.Equals, test.stdout)
-	}
-}
-
-func (s *SuperCommandSuite) TestRegisterSuperAliasHelp(c *gc.C) {
-	jc := cmd.NewSuperCommand(cmd.SuperCommandParams{
-		Name: "jujutest",
-	})
-	sub := cmd.NewSuperCommand(cmd.SuperCommandParams{
-		Name:        "bar",
-		UsagePrefix: "jujutest",
-		Purpose:     "bar functions",
-	})
-	jc.Register(sub)
-	sub.Register(&simple{name: "foo"})
-
-	jc.RegisterSuperAlias("bar-foo", "bar", "foo", nil)
-
-	for _, test := range []struct {
-		args []string
-	}{
-		{
-			args: []string{"bar", "foo", "--help"},
-		}, {
-			args: []string{"bar", "help", "foo"},
-		}, {
-			args: []string{"help", "bar-foo"},
-		}, {
-			args: []string{"bar-foo", "--help"},
-		},
-	} {
-		c.Logf("args: %v", test.args)
-		ctx := cmdtesting.Context(c)
-		code := cmd.Main(jc, ctx, test.args)
-		c.Check(code, gc.Equals, 0)
-		help := "usage: jujutest bar foo\npurpose: to be simple\n"
-		c.Check(cmdtesting.Stdout(ctx), gc.Equals, help)
 	}
 }
