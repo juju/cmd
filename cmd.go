@@ -91,6 +91,7 @@ func (c *CommandBase) AllowInterspersedFlags() bool {
 // output and errors to Stdout and Stderr respectively.
 type Context struct {
 	Dir     string
+	Env     map[string]string
 	Stdin   io.Reader
 	Stdout  io.Writer
 	Stderr  io.Writer
@@ -124,6 +125,22 @@ func (ctx *Context) Verbosef(format string, params ...interface{}) {
 	} else {
 		logger.Infof(format, params...)
 	}
+}
+
+// Getenv looks up an environment variable in the context. It mirrors
+// os.Getenv. An empty string is returned if the key is not set.
+func (ctx *Context) Getenv(key string) string {
+	value, _ := ctx.Env[key]
+	return value
+}
+
+// Setenv sets an environment variable in the context. It mirrors os.Setenv.
+func (ctx *Context) Setenv(key, value string) error {
+	if ctx.Env == nil {
+		ctx.Env = make(map[string]string)
+	}
+	ctx.Env[key] = value
+	return nil
 }
 
 // AbsPath returns an absolute representation of path, with relative paths
