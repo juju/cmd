@@ -24,6 +24,27 @@ func (s *CmdSuite) TestContext(c *gc.C) {
 	c.Assert(ctx.AbsPath("foo/bar"), gc.Equals, filepath.Join(ctx.Dir, "foo/bar"))
 }
 
+func (s *CmdSuite) TestContextGetenv(c *gc.C) {
+	ctx := cmdtesting.Context(c)
+	ctx.Env = make(map[string]string)
+	before := ctx.Getenv("foo")
+	ctx.Env["foo"] = "bar"
+	after := ctx.Getenv("foo")
+
+	c.Check(before, gc.Equals, "")
+	c.Check(after, gc.Equals, "bar")
+}
+
+func (s *CmdSuite) TestContextSetenv(c *gc.C) {
+	ctx := cmdtesting.Context(c)
+	before := ctx.Env["foo"]
+	ctx.Setenv("foo", "bar")
+	after := ctx.Env["foo"]
+
+	c.Check(before, gc.Equals, "")
+	c.Check(after, gc.Equals, "bar")
+}
+
 func (s *CmdSuite) TestInfo(c *gc.C) {
 	minimal := &TestCommand{Name: "verb", Minimal: true}
 	help := minimal.Info().Help(cmdtesting.NewFlagSet())
