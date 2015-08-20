@@ -156,9 +156,12 @@ func (c *Output) Write(ctx *Context, value interface{}) (err error) {
 		target = ctx.Stdout
 	} else {
 		path := ctx.AbsPath(c.outPath)
-		if target, err = os.Create(path); err != nil {
+		var f *os.File
+		if f, err = os.Create(path); err != nil {
 			return
 		}
+		defer f.Close()
+		target = f
 	}
 	bytes, err := c.formatter.format(value)
 	if err != nil {
