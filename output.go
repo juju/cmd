@@ -10,6 +10,7 @@ import (
 	"os"
 	"reflect"
 	"sort"
+	"strconv"
 	"strings"
 
 	goyaml "gopkg.in/yaml.v1"
@@ -69,7 +70,10 @@ func FormatSmart(value interface{}) ([]byte, error) {
 			return []byte("True"), nil
 		}
 		return []byte("False"), nil
-	case reflect.Map, reflect.Float32, reflect.Float64:
+	case reflect.Float32, reflect.Float64:
+		sv := strconv.FormatFloat(value.(float64), 'f', -1, 64)
+		return []byte(sv), nil
+	case reflect.Map:
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
 	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 	default:
