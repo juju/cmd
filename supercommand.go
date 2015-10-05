@@ -425,7 +425,7 @@ func (c *SuperCommand) Run(ctx *Context) error {
 		ctx.Infof("WARNING: %q is deprecated, please use %q", c.action.name, replacement)
 	}
 	err := c.action.command.Run(ctx)
-	if err != nil && err != ErrSilent {
+	if err != nil && !IsErrSilent(err) {
 		logger.Errorf("%v", err)
 		// Now that this has been logged, don't log again in cmd.Main.
 		if !IsRcPassthroughError(err) {
