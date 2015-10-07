@@ -17,14 +17,18 @@ import (
 	"launchpad.net/gnuflag"
 )
 
+// RcPassthroughError indicates that a Juju plugin command exited with a
+// non-zero exit code. This error is used to exit with the return code.
 type RcPassthroughError struct {
 	Code int
 }
 
+// Error implements error.
 func (e *RcPassthroughError) Error() string {
 	return fmt.Sprintf("subprocess encountered error code %v", e.Code)
 }
 
+// IsRcPassthroughError returns whether the error is an RcPassthroughError.
 func IsRcPassthroughError(err error) bool {
 	_, ok := err.(*RcPassthroughError)
 	return ok
@@ -40,6 +44,17 @@ func NewRcPassthroughError(code int) error {
 // ErrSilent can be returned from Run to signal that Main should exit with
 // code 1 without producing error output.
 var ErrSilent = errors.New("cmd: error out silently")
+
+// IsErrSilent returns whether the error should be logged from cmd.Main.
+func IsErrSilent(err error) bool {
+	if err == ErrSilent {
+		return true
+	}
+	if _, ok := err.(*RcPassthroughError); ok {
+		return true
+	}
+	return false
+}
 
 // Command is implemented by types that interpret command-line arguments.
 type Command interface {

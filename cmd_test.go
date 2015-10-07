@@ -5,6 +5,7 @@ package cmd_test
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -163,4 +164,10 @@ func (s *CmdSuite) TestZeroOrOneArgs(c *gc.C) {
 	arg, err := cmd.ZeroOrOneArgs([]string{"foo", "bar"})
 	c.Assert(arg, gc.Equals, "")
 	c.Assert(err, gc.ErrorMatches, `unrecognized args: \["bar"\]`)
+}
+
+func (s *CmdSuite) TestIsErrSilent(c *gc.C) {
+	c.Assert(cmd.IsErrSilent(cmd.ErrSilent), gc.Equals, true)
+	c.Assert(cmd.IsErrSilent(cmd.NewRcPassthroughError(99)), gc.Equals, true)
+	c.Assert(cmd.IsErrSilent(fmt.Errorf("noisy")), gc.Equals, false)
 }
