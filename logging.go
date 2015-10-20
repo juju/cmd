@@ -13,12 +13,6 @@ import (
 	"launchpad.net/gnuflag"
 )
 
-// WriterFactory defines the single method to create a new
-// logging writer for a specified output target.
-type WriterFactory interface {
-	NewWriter(target io.Writer) loggo.Writer
-}
-
 // Log supplies the necessary functionality for Commands that wish to set up
 // logging.
 type Log struct {
@@ -31,13 +25,15 @@ type Log struct {
 	Debug         bool
 	ShowLog       bool
 	Config        string
-	Factory       WriterFactory
+
+	// NewWriter creates a new logging writer for a specified target.
+	NewWriter func(target io.Writer) loggo.Writer
 }
 
 // GetLogWriter returns a logging writer for the specified target.
 func (l *Log) GetLogWriter(target io.Writer) loggo.Writer {
-	if l.Factory != nil {
-		return l.Factory.NewWriter(target)
+	if l.NewWriter != nil {
+		return l.NewWriter(target)
 	}
 	return loggo.NewSimpleWriter(target, &loggo.DefaultFormatter{})
 }
