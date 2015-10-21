@@ -13,7 +13,7 @@ import (
 	"strconv"
 	"strings"
 
-	goyaml "gopkg.in/yaml.v1"
+	goyaml "gopkg.in/yaml.v2"
 	"launchpad.net/gnuflag"
 )
 
