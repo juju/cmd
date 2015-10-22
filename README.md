@@ -60,10 +60,19 @@ func FormatYaml(value interface{}) ([]byte, error)
 FormatYaml marshals value to a yaml-formatted []byte, unless value is nil.
 
 
+## func IsErrSilent
+``` go
+func IsErrSilent(err error) bool
+```
+IsErrSilent returns whether the error should be logged from cmd.Main.
+
+
 ## func IsRcPassthroughError
 ``` go
 func IsRcPassthroughError(err error) bool
 ```
+IsRcPassthroughError returns whether the error is an RcPassthroughError.
+
 
 ## func Main
 ``` go
@@ -90,6 +99,16 @@ func NewRcPassthroughError(code int) error
 NewRcPassthroughError creates an error that will have the code used at the
 return code from the cmd.Main function rather than the default of 1 if
 there is an error.
+
+
+## func ParseAliasFile
+``` go
+func ParseAliasFile(aliasFilename string) map[string][]string
+```
+ ParseAliasFile will read the specified file and convert
+the content to a map of names to the command line arguments
+they relate to.  The function will always return a valid map, even
+if it is empty.
 
 
 ## func ZeroOrOneArgs
@@ -231,6 +250,7 @@ SetFlags does nothing in the simplest case.
 ``` go
 type Context struct {
     Dir    string
+    Env    map[string]string
     Stdin  io.Reader
     Stdout io.Writer
     Stderr io.Writer
@@ -291,6 +311,15 @@ GetStdout satisfies environs.BootstrapContext
 
 
 
+### func (\*Context) Getenv
+``` go
+func (ctx *Context) Getenv(key string) string
+```
+Getenv looks up an environment variable in the context. It mirrors
+os.Getenv. An empty string is returned if the key is not set.
+
+
+
 ### func (\*Context) Infof
 ``` go
 func (ctx *Context) Infof(format string, params ...interface{})
@@ -305,6 +334,14 @@ quiet is true the message is logged.
 func (ctx *Context) InterruptNotify(c chan<- os.Signal)
 ```
 InterruptNotify satisfies environs.BootstrapContext
+
+
+
+### func (\*Context) Setenv
+``` go
+func (ctx *Context) Setenv(key, value string) error
+```
+Setenv sets an environment variable in the context. It mirrors os.Setenv.
 
 
 
@@ -355,7 +392,12 @@ a command is deprecated or obsolete.
 ## type FileVar
 ``` go
 type FileVar struct {
+    // Path is the path to the file.
     Path string
+
+    // StdinMarkers are the Path values that should be interpreted as
+    // stdin. If it is empty then stdin is not supported.
+    StdinMarkers []string
 }
 ```
 FileVar represents a path to a file.
@@ -367,6 +409,22 @@ FileVar represents a path to a file.
 
 
 
+
+
+
+### func (FileVar) IsStdin
+``` go
+func (f FileVar) IsStdin() bool
+```
+IsStdin determines whether or not the path represents stdin.
+
+
+
+### func (\*FileVar) Open
+``` go
+func (f *FileVar) Open(ctx *Context) (io.ReadCloser, error)
+```
+Open opens the file.
 
 
 
@@ -383,6 +441,15 @@ Read returns the contents of the file.
 func (f *FileVar) Set(v string) error
 ```
 Set stores the chosen path name in f.Path.
+
+
+
+### func (\*FileVar) SetStdin
+``` go
+func (f *FileVar) SetStdin(markers ...string)
+```
+SetStdin sets StdinMarkers to the provided strings. If none are
+provided then the default of "-" is used.
 
 
 
@@ -567,6 +634,9 @@ type RcPassthroughError struct {
     Code int
 }
 ```
+RcPassthroughError indicates that a Juju plugin command exited with a
+non-zero exit code. This error is used to exit with the return code.
+
 
 
 
@@ -581,6 +651,8 @@ type RcPassthroughError struct {
 ``` go
 func (e *RcPassthroughError) Error() string
 ```
+Error implements error.
+
 
 
 ## type StringsValue
@@ -735,6 +807,16 @@ then the alias is not registered.
 
 
 
+### func (\*SuperCommand) RegisterDeprecated
+``` go
+func (c *SuperCommand) RegisterDeprecated(subcmd Command, check DeprecationCheck)
+```
+RegisterDeprecated makes a subcommand available for use on the command line if it
+is not obsolete.  It inserts the command with the specified DeprecationCheck so
+that a warning is displayed if the command is deprecated.
+
+
+
 ### func (\*SuperCommand) RegisterSuperAlias
 ``` go
 func (c *SuperCommand) RegisterSuperAlias(name, super, forName string, check DeprecationCheck)
@@ -793,6 +875,12 @@ type SuperCommandParams struct {
     MissingCallback MissingCallback
     Aliases         []string
     Version         string
+
+    // UserAliasesFilename refers to the location of a file that contains
+    //   name = cmd [args...]
+    // values, that is used to change default behaviour of commands in order
+    // to add flags, or provide short cuts to longer commands.
+    UserAliasesFilename string
 }
 ```
 SuperCommandParams provides a way to have default parameter to the
