@@ -13,7 +13,7 @@ import (
 	"launchpad.net/gnuflag"
 )
 
-var logger = loggo.GetLogger("juju.cmd")
+var logger = loggo.GetLogger("cmd")
 
 type topic struct {
 	short string
@@ -55,21 +55,28 @@ type SuperCommandParams struct {
 	MissingCallback MissingCallback
 	Aliases         []string
 	Version         string
+
+	// UserAliasesFilename refers to the location of a file that contains
+	//   name = cmd [args...]
+	// values, that is used to change default behaviour of commands in order
+	// to add flags, or provide short cuts to longer commands.
+	UserAliasesFilename string
 }
 
 // NewSuperCommand creates and initializes a new `SuperCommand`, and returns
 // the fully initialized structure.
 func NewSuperCommand(params SuperCommandParams) *SuperCommand {
 	command := &SuperCommand{
-		Name:            params.Name,
-		Purpose:         params.Purpose,
-		Doc:             params.Doc,
-		Log:             params.Log,
-		usagePrefix:     params.UsagePrefix,
-		missingCallback: params.MissingCallback,
-		Aliases:         params.Aliases,
-		version:         params.Version,
-		notifyRun:       params.NotifyRun,
+		Name:                params.Name,
+		Purpose:             params.Purpose,
+		Doc:                 params.Doc,
+		Log:                 params.Log,
+		usagePrefix:         params.UsagePrefix,
+		missingCallback:     params.MissingCallback,
+		Aliases:             params.Aliases,
+		version:             params.Version,
+		notifyRun:           params.NotifyRun,
+		userAliasesFilename: params.UserAliasesFilename,
 	}
 	command.init()
 	return command
@@ -102,23 +109,25 @@ type commandReference struct {
 // its selected subcommand.
 type SuperCommand struct {
 	CommandBase
-	Name            string
-	Purpose         string
-	Doc             string
-	Log             *Log
-	Aliases         []string
-	version         string
-	usagePrefix     string
-	subcmds         map[string]commandReference
-	help            *helpCommand
-	commonflags     *gnuflag.FlagSet
-	flags           *gnuflag.FlagSet
-	action          commandReference
-	showHelp        bool
-	showDescription bool
-	showVersion     bool
-	missingCallback MissingCallback
-	notifyRun       func(string)
+	Name                string
+	Purpose             string
+	Doc                 string
+	Log                 *Log
+	Aliases             []string
+	version             string
+	usagePrefix         string
+	userAliasesFilename string
+	userAliases         map[string][]string
+	subcmds             map[string]commandReference
+	help                *helpCommand
+	commonflags         *gnuflag.FlagSet
+	flags               *gnuflag.FlagSet
+	action              commandReference
+	showHelp            bool
+	showDescription     bool
+	showVersion         bool
+	missingCallback     MissingCallback
+	notifyRun           func(string)
 }
 
 // IsSuperCommand implements Command.IsSuperCommand
@@ -142,6 +151,8 @@ func (c *SuperCommand) init() {
 			command: newVersionCommand(c.version),
 		}
 	}
+
+	c.userAliases = ParseAliasFile(c.userAliasesFilename)
 }
 
 // AddHelpTopic adds a new help topic with the description being the short
@@ -358,6 +369,10 @@ func (c *SuperCommand) Init(args []string) error {
 		return c.action.command.Init(args)
 	}
 
+	if userAlias, found := c.userAliases[args[0]]; found {
+		logger.Debugf("using alias %q=%q", args[0], strings.Join(userAlias, " "))
+		args = append(userAlias, args[1:]...)
+	}
 	found := false
 	// Look for the command.
 	if c.action, found = c.subcmds[args[0]]; !found {

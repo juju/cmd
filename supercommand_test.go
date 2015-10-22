@@ -6,6 +6,8 @@ package cmd_test
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
+	"path/filepath"
 	"strings"
 
 	gitjujutesting "github.com/juju/testing"
@@ -18,6 +20,21 @@ import (
 
 func initDefenestrate(args []string) (*cmd.SuperCommand, *TestCommand, error) {
 	jc := cmd.NewSuperCommand(cmd.SuperCommandParams{Name: "jujutest"})
+	tc := &TestCommand{Name: "defenestrate"}
+	jc.Register(tc)
+	return jc, tc, cmdtesting.InitCommand(jc, args)
+}
+
+func initDefenestrateWithAliases(c *gc.C, args []string) (*cmd.SuperCommand, *TestCommand, error) {
+	dir := c.MkDir()
+	filename := filepath.Join(dir, "aliases")
+	err := ioutil.WriteFile(filename, []byte(`
+def = defenestrate
+be-firm = defenestrate --option firmly
+other = missing 
+		`), 0644)
+	c.Assert(err, gc.IsNil)
+	jc := cmd.NewSuperCommand(cmd.SuperCommandParams{Name: "jujutest", UserAliasesFilename: filename})
 	tc := &TestCommand{Name: "defenestrate"}
 	jc.Register(tc)
 	return jc, tc, cmdtesting.InitCommand(jc, args)
@@ -64,6 +81,33 @@ func (s *SuperCommandSuite) TestDispatch(c *gc.C) {
 	// --description must be used on it's own.
 	_, _, err = initDefenestrate([]string{"--description", "defenestrate"})
 	c.Assert(err, gc.ErrorMatches, `unrecognized args: \["defenestrate"\]`)
+}
+
+func (s *SuperCommandSuite) TestUserAliasDispatch(c *gc.C) {
+	// Can still use the full name.
+	jc, tc, err := initDefenestrateWithAliases(c, []string{"defenestrate"})
+	c.Assert(err, gc.IsNil)
+	c.Assert(tc.Option, gc.Equals, "")
+	info := jc.Info()
+	c.Assert(info.Name, gc.Equals, "jujutest defenestrate")
+	c.Assert(info.Args, gc.Equals, "<something>")
+	c.Assert(info.Doc, gc.Equals, "defenestrate-doc")
+
+	jc, tc, err = initDefenestrateWithAliases(c, []string{"def"})
+	c.Assert(err, gc.IsNil)
+	c.Assert(tc.Option, gc.Equals, "")
+	info = jc.Info()
+	c.Assert(info.Name, gc.Equals, "jujutest defenestrate")
+
+	jc, tc, err = initDefenestrateWithAliases(c, []string{"be-firm"})
+	c.Assert(err, gc.IsNil)
+	c.Assert(tc.Option, gc.Equals, "firmly")
+	info = jc.Info()
+	c.Assert(info.Name, gc.Equals, "jujutest defenestrate")
+
+	// Aliases to missing values are converted before lookup.
+	_, _, err = initDefenestrateWithAliases(c, []string{"other"})
+	c.Assert(err, gc.ErrorMatches, "unrecognized command: jujutest missing")
 }
 
 func (s *SuperCommandSuite) TestRegister(c *gc.C) {
