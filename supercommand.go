@@ -126,6 +126,7 @@ type SuperCommand struct {
 	showHelp            bool
 	showDescription     bool
 	showVersion         bool
+	noAlias             bool
 	missingCallback     MissingCallback
 	notifyRun           func(string)
 }
@@ -346,7 +347,10 @@ func (c *SuperCommand) SetFlags(f *gnuflag.FlagSet) {
 	// Any flags added below only take effect when no subcommand is
 	// specified (e.g. command --version).
 	if c.version != "" {
-		f.BoolVar(&c.showVersion, "version", false, "Show the command's version and exit")
+		f.BoolVar(&c.showVersion, "version", false, "show the command's version and exit")
+	}
+	if c.userAliasesFilename != "" {
+		f.BoolVar(&c.noAlias, "no-alias", false, "do not process command aliases when running this command")
 	}
 	c.flags = f
 }
@@ -369,7 +373,7 @@ func (c *SuperCommand) Init(args []string) error {
 		return c.action.command.Init(args)
 	}
 
-	if userAlias, found := c.userAliases[args[0]]; found {
+	if userAlias, found := c.userAliases[args[0]]; found && !c.noAlias {
 		logger.Debugf("using alias %q=%q", args[0], strings.Join(userAlias, " "))
 		args = append(userAlias, args[1:]...)
 	}

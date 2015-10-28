@@ -81,6 +81,10 @@ func (s *SuperCommandSuite) TestDispatch(c *gc.C) {
 	// --description must be used on it's own.
 	_, _, err = initDefenestrate([]string{"--description", "defenestrate"})
 	c.Assert(err, gc.ErrorMatches, `unrecognized args: \["defenestrate"\]`)
+
+	// --no-alias is not a valid option if there is no alias file speciifed
+	_, _, err = initDefenestrate([]string{"--no-alias", "defenestrate"})
+	c.Assert(err, gc.ErrorMatches, `flag provided but not defined: --no-alias`)
 }
 
 func (s *SuperCommandSuite) TestUserAliasDispatch(c *gc.C) {
@@ -104,6 +108,9 @@ func (s *SuperCommandSuite) TestUserAliasDispatch(c *gc.C) {
 	c.Assert(tc.Option, gc.Equals, "firmly")
 	info = jc.Info()
 	c.Assert(info.Name, gc.Equals, "jujutest defenestrate")
+
+	_, _, err = initDefenestrateWithAliases(c, []string{"--no-alias", "def"})
+	c.Assert(err, gc.ErrorMatches, "unrecognized command: jujutest def")
 
 	// Aliases to missing values are converted before lookup.
 	_, _, err = initDefenestrateWithAliases(c, []string{"other"})
