@@ -214,7 +214,7 @@ type Info struct {
 // flags defined in f. It calls f.SetOutput(ioutil.Discard).
 func (i *Info) Help(f *gnuflag.FlagSet) []byte {
 	buf := &bytes.Buffer{}
-	fmt.Fprintf(buf, "usage: %s", i.Name)
+	fmt.Fprintf(buf, "Usage: %s", i.Name)
 	hasOptions := false
 	f.VisitAll(func(f *gnuflag.Flag) { hasOptions = true })
 	if hasOptions {
@@ -225,19 +225,20 @@ func (i *Info) Help(f *gnuflag.FlagSet) []byte {
 	}
 	fmt.Fprintf(buf, "\n")
 	if i.Purpose != "" {
-		fmt.Fprintf(buf, "purpose: %s\n", i.Purpose)
+		fmt.Fprintf(buf, "\nSummary:\n%s\n", i.Purpose)
 	}
 	if hasOptions {
-		fmt.Fprintf(buf, "\noptions:\n")
+		fmt.Fprintf(buf, "\nOptions:\n")
 		f.SetOutput(buf)
 		f.PrintDefaults()
 	}
 	f.SetOutput(ioutil.Discard)
 	if i.Doc != "" {
-		fmt.Fprintf(buf, "\n%s\n", strings.TrimSpace(i.Doc))
+		fmt.Fprintf(buf, "\nDetails:\n")
+		fmt.Fprintf(buf, "%s\n", strings.TrimSpace(i.Doc))
 	}
 	if len(i.Aliases) > 0 {
-		fmt.Fprintf(buf, "\naliases: %s\n", strings.Join(i.Aliases, ", "))
+		fmt.Fprintf(buf, "\nAliases: %s\n", strings.Join(i.Aliases, ", "))
 	}
 	return buf.Bytes()
 }

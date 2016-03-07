@@ -67,20 +67,25 @@ func (c *TestCommand) Run(ctx *cmd.Context) error {
 
 // minimalHelp and fullHelp are the expected help strings for a TestCommand
 // with Name "verb", with and without Minimal set.
-var minimalHelp = "usage: verb\n"
-var optionHelp = `usage: verb [options] <something>
-purpose: verb the juju
+var minimalHelp = "Usage: verb\n"
+var optionHelp = `Usage: verb [options] <something>
 
-options:
+Summary:
+verb the juju
+
+Options:
 --option (= "")
     option-doc
 `
-var fullHelp = `usage: verb [options] <something>
-purpose: verb the juju
+var fullHelp = `Usage: verb [options] <something>
 
-options:
+Summary:
+verb the juju
+
+Options:
 --option (= "")
     option-doc
 
+Details:
 verb-doc
 `
