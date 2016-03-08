@@ -41,31 +41,31 @@ func (s *HelpCommandSuite) TestHelpOutput(c *gc.C) {
 	}{
 		{
 			message:   "no args shows help",
-			helpMatch: "usage: jujutest .*",
+			helpMatch: "Usage: jujutest .*",
 		}, {
 			message:     "usage prefix with help command",
 			args:        []string{"help"},
 			usagePrefix: "juju",
-			helpMatch:   "usage: juju jujutest .*",
+			helpMatch:   "Usage: juju jujutest .*",
 		}, {
 			message:     "usage prefix with help flag",
 			args:        []string{"--help"},
 			usagePrefix: "juju",
-			helpMatch:   "usage: juju jujutest .*",
+			helpMatch:   "Usage: juju jujutest .*",
 		}, {
 			message:   "help arg usage",
 			args:      []string{"blah", "--help"},
-			helpMatch: "usage: jujutest blah.*blah-doc.*",
+			helpMatch: "Usage: jujutest blah.*blah-doc.*",
 		}, {
 			message:     "usage prefix with help command",
 			args:        []string{"help", "blah"},
 			usagePrefix: "juju",
-			helpMatch:   "usage: juju jujutest blah .*",
+			helpMatch:   "Usage: juju jujutest blah .*",
 		}, {
 			message:     "usage prefix with help flag",
 			args:        []string{"blah", "--help"},
 			usagePrefix: "juju",
-			helpMatch:   "usage: juju jujutest blah .*",
+			helpMatch:   "Usage: juju jujutest blah .*",
 		}, {
 			message:  "too many args",
 			args:     []string{"help", "blah", "blah"},
@@ -108,7 +108,7 @@ func (s *HelpCommandSuite) TestMultipleSuperCommands(c *gc.C) {
 
 	ctx, err := cmdtesting.RunCommand(c, level1, "help", "level2", "level3", "blah")
 	c.Assert(err, jc.ErrorIsNil)
-	s.assertStdOutMatches(c, ctx, "usage: level1 level2 level3 blah.*blah-doc.*")
+	s.assertStdOutMatches(c, ctx, "Usage: level1 level2 level3 blah.*blah-doc.*")
 
 	_, err = cmdtesting.RunCommand(c, level1, "help", "level2", "missing", "blah")
 	c.Assert(err, gc.ErrorMatches, `subcommand "missing" not found`)
@@ -121,7 +121,7 @@ func (s *HelpCommandSuite) TestAlias(c *gc.C) {
 	code := cmd.Main(super, ctx, []string{"help", "alias"})
 	c.Assert(code, gc.Equals, 0)
 	stripped := strings.Replace(bufferString(ctx.Stdout), "\n", "", -1)
-	c.Assert(stripped, gc.Matches, "usage: super blah .*aliases: alias")
+	c.Assert(stripped, gc.Matches, "Usage: super blah .*Aliases: alias")
 }
 
 func (s *HelpCommandSuite) TestRegisterSuperAliasHelp(c *gc.C) {
@@ -155,7 +155,7 @@ func (s *HelpCommandSuite) TestRegisterSuperAliasHelp(c *gc.C) {
 		ctx := cmdtesting.Context(c)
 		code := cmd.Main(jc, ctx, test.args)
 		c.Check(code, gc.Equals, 0)
-		help := "usage: jujutest bar foo\npurpose: to be simple\n"
+		help := "Usage: jujutest bar foo\n\nSummary:\nto be simple\n"
 		c.Check(cmdtesting.Stdout(ctx), gc.Equals, help)
 	}
 }

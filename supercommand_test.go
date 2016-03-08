@@ -372,7 +372,7 @@ func (s *SuperCommandSuite) TestSupercommandAliases(c *gc.C) {
 		code := cmd.Main(jc, ctx, []string{name, "--help"})
 		c.Assert(code, gc.Equals, 0)
 		stripped := strings.Replace(bufferString(ctx.Stdout), "\n", "", -1)
-		c.Assert(stripped, gc.Matches, ".*usage: juju jujutest jubar.*aliases: jubaz, jubing")
+		c.Assert(stripped, gc.Matches, ".*Usage: juju jujutest jubar.*Aliases: jubaz, jubing")
 	}
 }
 
