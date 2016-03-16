@@ -12,16 +12,16 @@ import (
 // semantics.  It expects a name=value pair, and supports multiple copies of the
 // flag adding more pairs, though the names must be unique.
 type StringMap struct {
-	mapping *map[string]string
+	Mapping *map[string]string
 }
 
 // Set implements gnuflag.Value's Set method.
 func (m StringMap) Set(s string) error {
-	if *m.mapping == nil {
-		*m.mapping = map[string]string{}
+	if *m.Mapping == nil {
+		*m.Mapping = map[string]string{}
 	}
 	// make a copy so the following code is less ugly with dereferencing.
-	mapping := *m.mapping
+	mapping := *m.Mapping
 
 	vals := strings.SplitN(s, "=", 2)
 	if len(vals) != 2 {
@@ -37,8 +37,8 @@ func (m StringMap) Set(s string) error {
 
 // String implements gnuflag.Value's String method
 func (m StringMap) String() string {
-	pairs := make([]string, 0, len(*m.mapping))
-	for name, value := range *m.mapping {
+	pairs := make([]string, 0, len(*m.Mapping))
+	for name, value := range *m.Mapping {
 		pairs = append(pairs, name+"="+value)
 	}
 	return strings.Join(pairs, ";")

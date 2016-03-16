@@ -1,9 +1,10 @@
 // Copyright 2016 Canonical Ltd.
 // Licensed under the LGPLv3, see LICENCE file for details.
 
-package cmd
+package cmd_test
 
 import (
+	"github.com/juju/cmd"
 	"github.com/juju/testing"
 	jc "github.com/juju/testing/checkers"
 	gc "gopkg.in/check.v1"
@@ -19,7 +20,7 @@ func (StringMapSuite) TestStringMapNilOk(c *gc.C) {
 	// note that the map may start out nil
 	var values map[string]string
 	c.Assert(values, gc.IsNil)
-	sm := StringMap{&values}
+	sm := cmd.StringMap{Mapping: &values}
 	err := sm.Set("foo=foovalue")
 	c.Assert(err, jc.ErrorIsNil)
 	err = sm.Set("bar=barvalue")
@@ -33,13 +34,13 @@ func (StringMapSuite) TestStringMapNilOk(c *gc.C) {
 }
 
 func (StringMapSuite) TestStringMapBadVal(c *gc.C) {
-	sm := StringMap{&map[string]string{}}
+	sm := cmd.StringMap{Mapping: &map[string]string{}}
 	err := sm.Set("foo")
 	c.Assert(err, gc.ErrorMatches, "badly formatted name value pair: foo")
 }
 
 func (StringMapSuite) TestStringMapDupVal(c *gc.C) {
-	sm := StringMap{&map[string]string{}}
+	sm := cmd.StringMap{Mapping: &map[string]string{}}
 	err := sm.Set("bar=somevalue")
 	c.Assert(err, jc.ErrorIsNil)
 	err = sm.Set("bar=someothervalue")
