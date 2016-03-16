@@ -1,4 +1,4 @@
-// Copyright 2012, 2013 Canonical Ltd.
+// Copyright 2016 Canonical Ltd.
 // Licensed under the LGPLv3, see LICENSE file for details.
 
 package cmd
