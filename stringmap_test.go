@@ -36,7 +36,7 @@ func (StringMapSuite) TestStringMapNilOk(c *gc.C) {
 func (StringMapSuite) TestStringMapBadVal(c *gc.C) {
 	sm := cmd.StringMap{Mapping: &map[string]string{}}
 	err := sm.Set("foo")
-	c.Assert(err, gc.ErrorMatches, "badly formatted name value pair: foo")
+	c.Assert(err, gc.ErrorMatches, "expected key=value format")
 }
 
 func (StringMapSuite) TestStringMapDupVal(c *gc.C) {
@@ -44,5 +44,17 @@ func (StringMapSuite) TestStringMapDupVal(c *gc.C) {
 	err := sm.Set("bar=somevalue")
 	c.Assert(err, jc.ErrorIsNil)
 	err = sm.Set("bar=someothervalue")
-	c.Assert(err, gc.ErrorMatches, ".*duplicate.*bar.*")
+	c.Assert(err, gc.ErrorMatches, "duplicate key specified")
+}
+
+func (StringMapSuite) TestStringMapNoValue(c *gc.C) {
+	sm := cmd.StringMap{Mapping: &map[string]string{}}
+	err := sm.Set("bar=")
+	c.Assert(err, gc.ErrorMatches, "key and value must be non-empty")
+}
+
+func (StringMapSuite) TestStringMapNoKey(c *gc.C) {
+	sm := cmd.StringMap{Mapping: &map[string]string{}}
+	err := sm.Set("=bar")
+	c.Assert(err, gc.ErrorMatches, "key and value must be non-empty")
 }
