@@ -10,7 +10,8 @@ import (
 
 // StringMap is a type that deserializes a CLI string using gnuflag's Value
 // semantics.  It expects a key=value pair, and supports multiple copies of the
-// flag adding more pairs, though the keys must be unique.
+// flag adding more pairs, though the keys must be unique, and both keys and
+// values must be non-empty.
 type StringMap struct {
 	Mapping *map[string]string
 }
