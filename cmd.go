@@ -225,7 +225,7 @@ func (i *Info) Help(f *gnuflag.FlagSet) []byte {
 	}
 	fmt.Fprintf(buf, "\n")
 	if i.Purpose != "" {
-		fmt.Fprintf(buf, "\nSummary:\n%s\n", strings.TrimSpace((i.Purpose)))
+		fmt.Fprintf(buf, "\nSummary:\n%s\n", strings.TrimSpace(i.Purpose))
 	}
 	if hasOptions {
 		fmt.Fprintf(buf, "\nOptions:\n")

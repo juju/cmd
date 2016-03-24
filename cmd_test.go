@@ -182,21 +182,24 @@ func (s *CmdSuite) TestInfoHelp(c *gc.C) {
 	fs.StringVar(&option, "option", "", "option-doc")
 
 	table := []struct {
-		summary, details, want string
+		summary, details string
 	}{
 		{`
 			verb the juju`,
 			`
-			verb-doc`, fullHelp},
-		{`verb the juju`, `verb-doc`, fullHelp},
+			verb-doc`},
+		{`verb the juju`, `verb-doc`},
 		{`
 			
 			verb the juju`,
 			`
 			
-			verb-doc`, fullHelp},
-	}
+			verb-doc`},
+		{`verb the juju    `, `verb-doc
 
+		 `},
+	}
+	want := fullHelp
 	for _, tv := range table {
 		i := cmd.Info{
 			Name:    "verb",
@@ -204,6 +207,7 @@ func (s *CmdSuite) TestInfoHelp(c *gc.C) {
 			Purpose: tv.summary,
 			Doc:     tv.details,
 		}
-		c.Assert(string(i.Help(fs)), gc.Equals, tv.want)
+		got := string(i.Help(fs))
+		c.Check(got, gc.Equals, want)
 	}
 }
