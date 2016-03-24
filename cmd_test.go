@@ -9,6 +9,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"launchpad.net/gnuflag"
+
 	gc "gopkg.in/check.v1"
 
 	"github.com/juju/cmd"
@@ -170,4 +172,42 @@ func (s *CmdSuite) TestIsErrSilent(c *gc.C) {
 	c.Assert(cmd.IsErrSilent(cmd.ErrSilent), gc.Equals, true)
 	c.Assert(cmd.IsErrSilent(cmd.NewRcPassthroughError(99)), gc.Equals, true)
 	c.Assert(cmd.IsErrSilent(fmt.Errorf("noisy")), gc.Equals, false)
+}
+
+func (s *CmdSuite) TestInfoHelp(c *gc.C) {
+	// Test that white space is trimmed consistently from cmd.Info.Purpose
+	// (Help Summary) and cmd.Info.Doc (Help Details)
+	option := "option"
+	fs := gnuflag.NewFlagSet("", gnuflag.ContinueOnError)
+	fs.StringVar(&option, "option", "", "option-doc")
+
+	table := []struct {
+		summary, details string
+	}{
+		{`
+			verb the juju`,
+			`
+			verb-doc`},
+		{`verb the juju`, `verb-doc`},
+		{`
+			
+			verb the juju`,
+			`
+			
+			verb-doc`},
+		{`verb the juju    `, `verb-doc
+
+		 `},
+	}
+	want := fullHelp
+	for _, tv := range table {
+		i := cmd.Info{
+			Name:    "verb",
+			Args:    "<something>",
+			Purpose: tv.summary,
+			Doc:     tv.details,
+		}
+		got := string(i.Help(fs))
+		c.Check(got, gc.Equals, want)
+	}
 }
