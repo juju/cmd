@@ -129,7 +129,7 @@ func (v *formatterValue) doc() string {
 		i++
 	}
 	sort.Strings(choices)
-	return "specify output format (" + strings.Join(choices, "|") + ")"
+	return "Specify output format (" + strings.Join(choices, "|") + ")"
 }
 
 // format runs the chosen formatter on value.
@@ -148,7 +148,7 @@ type Output struct {
 func (c *Output) AddFlags(f *gnuflag.FlagSet, defaultFormatter string, formatters map[string]Formatter) {
 	c.formatter = newFormatterValue(defaultFormatter, formatters)
 	f.Var(c.formatter, "format", c.formatter.doc())
-	f.StringVar(&c.outPath, "o", "", "specify an output file")
+	f.StringVar(&c.outPath, "o", "", "Specify an output file")
 	f.StringVar(&c.outPath, "output", "", "")
 }
 
