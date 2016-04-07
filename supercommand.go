@@ -9,6 +9,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/juju/errors"
 	"github.com/juju/loggo"
 	"launchpad.net/gnuflag"
 )
@@ -446,6 +447,7 @@ func (c *SuperCommand) Run(ctx *Context) error {
 	err := c.action.command.Run(ctx)
 	if err != nil && !IsErrSilent(err) {
 		logger.Errorf("%v", err)
+		logger.Debugf("(error details: %v)", errors.Details(err))
 		// Now that this has been logged, don't log again in cmd.Main.
 		if !IsRcPassthroughError(err) {
 			err = ErrSilent
