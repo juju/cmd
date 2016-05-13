@@ -100,7 +100,8 @@ func (log *Log) Start(ctx *Context) error {
 		}
 	}
 	// Set the level on the root logger.
-	loggo.GetLogger("").SetLogLevel(level)
+	root := loggo.GetLogger("")
+	root.SetLogLevel(level)
 	// Override the logging config with specified logging config.
 	loggo.ConfigureLoggers(log.Config)
 	return nil
