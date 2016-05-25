@@ -49,6 +49,13 @@ type SuperCommandParams struct {
 	// is about to run a sub-command.
 	NotifyRun func(cmdName string)
 
+	// NotifyHelp is called just before help is printed, with the
+	// arguments received by the help command. This can be
+	// used, for example, to load command information for external
+	// "plugin" commands, so that their documentation will show up
+	// in the help output.
+	NotifyHelp func([]string)
+
 	Name            string
 	Purpose         string
 	Doc             string
@@ -77,6 +84,7 @@ func NewSuperCommand(params SuperCommandParams) *SuperCommand {
 		Aliases:             params.Aliases,
 		version:             params.Version,
 		notifyRun:           params.NotifyRun,
+		notifyHelp:          params.NotifyHelp,
 		userAliasesFilename: params.UserAliasesFilename,
 	}
 	command.init()
@@ -130,6 +138,7 @@ type SuperCommand struct {
 	noAlias             bool
 	missingCallback     MissingCallback
 	notifyRun           func(string)
+	notifyHelp          func([]string)
 }
 
 // IsSuperCommand implements Command.IsSuperCommand

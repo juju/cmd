@@ -159,3 +159,21 @@ func (s *HelpCommandSuite) TestRegisterSuperAliasHelp(c *gc.C) {
 		c.Check(cmdtesting.Stdout(ctx), gc.Equals, help)
 	}
 }
+
+func (s *HelpCommandSuite) TestNotifyHelp(c *gc.C) {
+	var called [][]string
+	super := cmd.NewSuperCommand(cmd.SuperCommandParams{
+		Name: "super",
+		NotifyHelp: func(args []string) {
+			called = append(called, args)
+		},
+	})
+	super.Register(&TestCommand{
+		Name: "blah",
+	})
+	ctx := cmdtesting.Context(c)
+	code := cmd.Main(super, ctx, []string{"help", "blah"})
+	c.Assert(code, gc.Equals, 0)
+
+	c.Assert(called, jc.DeepEquals, [][]string{{"blah"}})
+}

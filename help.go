@@ -105,6 +105,9 @@ See also: topics
 }
 
 func (c *helpCommand) Init(args []string) error {
+	if c.super.notifyHelp != nil {
+		c.super.notifyHelp(args)
+	}
 	logger.Tracef("helpCommand.Init: %#v", args)
 	if len(args) == 0 {
 		// If there is no help topic specified, print basic usage if it is
