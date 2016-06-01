@@ -131,9 +131,9 @@ func (s *SuperCommandSuite) TestAliasesRegistered(c *gc.C) {
 
 	info := jc.Info()
 	c.Assert(info.Doc, gc.Equals, `commands:
-    flap - alias for 'flip'
+    flap - Alias for 'flip'.
     flip - flip the juju
-    flop - alias for 'flip'
+    flop - Alias for 'flip'.
     help - show help on a command or other topic`)
 }
 
@@ -429,7 +429,7 @@ func (s *SuperCommandSuite) TestRegisterAlias(c *gc.C) {
 	info := jc.Info()
 	// NOTE: deprecated `bar` not shown in commands.
 	c.Assert(info.Doc, gc.Equals, `commands:
-    foo  - alias for 'test'
+    foo  - Alias for 'test'.
     help - show help on a command or other topic
     test - to be simple`)
 
@@ -494,7 +494,7 @@ func (s *SuperCommandSuite) TestRegisterSuperAlias(c *gc.C) {
 	// NOTE: deprecated `bar` not shown in commands.
 	c.Assert(info.Doc, gc.Equals, `commands:
     bar     - bar functions
-    bar-foo - alias for 'bar foo'
+    bar-foo - Alias for 'bar foo'.
     help    - show help on a command or other topic
     test    - to be simple`)
 
