@@ -295,7 +295,7 @@ func (c *SuperCommand) describeCommands(simple bool) string {
 		info := action.command.Info()
 		purpose := info.Purpose
 		if action.alias != "" {
-			purpose = "alias for '" + action.alias + "'"
+			purpose = "Alias for '" + action.alias + "'."
 		}
 		result = append(result, fmt.Sprintf(lineFormat, longest, name, purpose))
 	}
