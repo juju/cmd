@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"time"
 
 	"github.com/juju/loggo"
 	"launchpad.net/gnuflag"
@@ -35,7 +34,7 @@ func (l *Log) GetLogWriter(target io.Writer) loggo.Writer {
 	if l.NewWriter != nil {
 		return l.NewWriter(target)
 	}
-	return loggo.NewSimpleWriter(target, &loggo.DefaultFormatter{})
+	return loggo.NewSimpleWriter(target, loggo.DefaultFormatter)
 }
 
 // AddFlags adds appropriate flags to f.
@@ -64,7 +63,7 @@ func (log *Log) Start(ctx *Context) error {
 			return err
 		}
 		writer := log.GetLogWriter(target)
-		err = loggo.RegisterWriter("logfile", writer, loggo.TRACE)
+		err = loggo.RegisterWriter("logfile", writer)
 		if err != nil {
 			return err
 		}
@@ -93,8 +92,9 @@ func (log *Log) Start(ctx *Context) error {
 		loggo.RemoveWriter("default")
 		// Create a simple writer that doesn't show filenames, or timestamps,
 		// and only shows warning or above.
-		writer := loggo.NewSimpleWriter(ctx.Stderr, &warningFormatter{})
-		err := loggo.RegisterWriter("warning", writer, loggo.WARNING)
+		writer := loggo.NewSimpleWriter(ctx.Stderr, warningFormatter)
+		writer = loggo.NewMinimumLevelWriter(writer, loggo.WARNING)
+		err := loggo.RegisterWriter("warning", writer)
 		if err != nil {
 			return err
 		}
@@ -109,10 +109,8 @@ func (log *Log) Start(ctx *Context) error {
 
 // warningFormatter is a simple loggo formatter that produces something like:
 //   WARNING The message...
-type warningFormatter struct{}
-
-func (*warningFormatter) Format(level loggo.Level, _, _ string, _ int, _ time.Time, message string) string {
-	return fmt.Sprintf("%s %s", level, message)
+func warningFormatter(entry loggo.Entry) string {
+	return fmt.Sprintf("%s %s", entry.Level, entry.Message)
 }
 
 // NewCommandLogWriter creates a loggo writer for registration
@@ -130,12 +128,12 @@ type commandLogWriter struct {
 }
 
 // Write implements loggo's Writer interface.
-func (s *commandLogWriter) Write(level loggo.Level, name, filename string, line int, timestamp time.Time, message string) {
-	if name == s.name {
-		if level <= loggo.INFO {
-			fmt.Fprintf(s.out, "%s\n", message)
+func (s *commandLogWriter) Write(entry loggo.Entry) {
+	if entry.Module == s.name {
+		if entry.Level <= loggo.INFO {
+			fmt.Fprintf(s.out, "%s\n", entry.Message)
 		} else {
-			fmt.Fprintf(s.err, "%s\n", message)
+			fmt.Fprintf(s.err, "%s\n", entry.Message)
 		}
 	}
 }

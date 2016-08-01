@@ -18,18 +18,10 @@ import (
 var logger = loggo.GetLogger("juju.test")
 
 type LogSuite struct {
-	testing.CleanupSuite
+	testing.LoggingCleanupSuite
 }
 
 var _ = gc.Suite(&LogSuite{})
-
-func (s *LogSuite) SetUpTest(c *gc.C) {
-	s.CleanupSuite.SetUpTest(c)
-	s.AddCleanup(func(_ *gc.C) {
-		loggo.ResetLoggers()
-		loggo.ResetWriters()
-	})
-}
 
 func newLogWithFlags(c *gc.C, defaultConfig string, flags ...string) *cmd.Log {
 	log := &cmd.Log{
