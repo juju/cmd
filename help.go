@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	"launchpad.net/gnuflag"
+	"github.com/juju/gnuflag"
 )
 
 type helpCommand struct {

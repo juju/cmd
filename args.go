@@ -6,7 +6,7 @@ package cmd
 import (
 	"strings"
 
-	"launchpad.net/gnuflag"
+	"github.com/juju/gnuflag"
 )
 
 // StringsValue implements gnuflag.Value for a comma separated list of

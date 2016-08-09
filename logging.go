@@ -9,7 +9,7 @@ import (
 	"os"
 
 	"github.com/juju/loggo"
-	"launchpad.net/gnuflag"
+	"github.com/juju/gnuflag"
 )
 
 // Log supplies the necessary functionality for Commands that wish to set up

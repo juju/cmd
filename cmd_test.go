@@ -9,7 +9,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"launchpad.net/gnuflag"
+	"github.com/juju/gnuflag"
 
 	gc "gopkg.in/check.v1"
 

@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"io"
 
-	"launchpad.net/gnuflag"
+	"github.com/juju/gnuflag"
 
 	"github.com/juju/cmd"
 )
