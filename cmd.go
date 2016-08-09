@@ -14,7 +14,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"launchpad.net/gnuflag"
+	"github.com/juju/gnuflag"
 )
 
 // RcPassthroughError indicates that a Juju plugin command exited with a

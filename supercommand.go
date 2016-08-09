@@ -11,7 +11,7 @@ import (
 
 	"github.com/juju/errors"
 	"github.com/juju/loggo"
-	"launchpad.net/gnuflag"
+	"github.com/juju/gnuflag"
 )
 
 var logger = loggo.GetLogger("cmd")
