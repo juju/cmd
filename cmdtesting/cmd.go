@@ -7,8 +7,8 @@ import (
 	"bytes"
 	"io/ioutil"
 
-	gc "gopkg.in/check.v1"
 	"github.com/juju/gnuflag"
+	gc "gopkg.in/check.v1"
 
 	"github.com/juju/cmd"
 )

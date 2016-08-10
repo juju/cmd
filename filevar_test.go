@@ -10,11 +10,11 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/juju/gnuflag"
 	gitjujutesting "github.com/juju/testing"
 	jc "github.com/juju/testing/checkers"
 	"github.com/juju/utils"
 	gc "gopkg.in/check.v1"
-	"github.com/juju/gnuflag"
 
 	"github.com/juju/cmd"
 	"github.com/juju/cmd/cmdtesting"

@@ -10,8 +10,8 @@ import (
 	"strings"
 
 	"github.com/juju/errors"
-	"github.com/juju/loggo"
 	"github.com/juju/gnuflag"
+	"github.com/juju/loggo"
 )
 
 var logger = loggo.GetLogger("cmd")

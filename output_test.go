@@ -4,8 +4,8 @@
 package cmd_test
 
 import (
-	gc "gopkg.in/check.v1"
 	"github.com/juju/gnuflag"
+	gc "gopkg.in/check.v1"
 
 	"github.com/juju/cmd"
 	"github.com/juju/cmd/cmdtesting"
