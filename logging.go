@@ -8,8 +8,8 @@ import (
 	"io"
 	"os"
 
-	"github.com/juju/loggo"
 	"github.com/juju/gnuflag"
+	"github.com/juju/loggo"
 )
 
 // Log supplies the necessary functionality for Commands that wish to set up

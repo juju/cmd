@@ -13,8 +13,8 @@ import (
 	"strconv"
 	"strings"
 
-	goyaml "gopkg.in/yaml.v2"
 	"github.com/juju/gnuflag"
+	goyaml "gopkg.in/yaml.v2"
 )
 
 // Formatter converts an arbitrary object into a []byte.
