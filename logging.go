@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 
+	"github.com/juju/ansiterm"
 	"github.com/juju/gnuflag"
 	"github.com/juju/loggo"
 )
@@ -34,7 +35,7 @@ func (l *Log) GetLogWriter(target io.Writer) loggo.Writer {
 	if l.NewWriter != nil {
 		return l.NewWriter(target)
 	}
-	return loggo.NewSimpleWriter(target, loggo.DefaultFormatter)
+	return loggo.NewColorWriter(target)
 }
 
 // AddFlags adds appropriate flags to f.
@@ -92,8 +93,7 @@ func (log *Log) Start(ctx *Context) error {
 		loggo.RemoveWriter("default")
 		// Create a simple writer that doesn't show filenames, or timestamps,
 		// and only shows warning or above.
-		writer := loggo.NewSimpleWriter(ctx.Stderr, warningFormatter)
-		writer = loggo.NewMinimumLevelWriter(writer, loggo.WARNING)
+		writer := NewWarningWriter(ctx.Stderr)
 		err := loggo.RegisterWriter("warning", writer)
 		if err != nil {
 			return err
@@ -105,12 +105,6 @@ func (log *Log) Start(ctx *Context) error {
 	// Override the logging config with specified logging config.
 	loggo.ConfigureLoggers(log.Config)
 	return nil
-}
-
-// warningFormatter is a simple loggo formatter that produces something like:
-//   WARNING The message...
-func warningFormatter(entry loggo.Entry) string {
-	return fmt.Sprintf("%s %s", entry.Level, entry.Message)
 }
 
 // NewCommandLogWriter creates a loggo writer for registration
@@ -136,4 +130,22 @@ func (s *commandLogWriter) Write(entry loggo.Entry) {
 			fmt.Fprintf(s.err, "%s\n", entry.Message)
 		}
 	}
+}
+
+type warningWriter struct {
+	writer *ansiterm.Writer
+}
+
+// NewColorWriter will write out colored severity levels if the writer is
+// outputting to a terminal.
+func NewWarningWriter(writer io.Writer) loggo.Writer {
+	w := &warningWriter{ansiterm.NewWriter(writer)}
+	return loggo.NewMinimumLevelWriter(w, loggo.WARNING)
+}
+
+// Write implements Writer.
+//   WARNING The message...
+func (w *warningWriter) Write(entry loggo.Entry) {
+	loggo.SeverityColor[entry.Level].Fprintf(w.writer, entry.Level.String())
+	fmt.Fprintf(w.writer, " %s\n", entry.Message)
 }
