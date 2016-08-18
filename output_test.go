@@ -50,8 +50,8 @@ var outputTests = map[string][]struct {
 	output string
 }{
 	"": {
-		{nil, ""},
-		{"", ""},
+		{nil, "\n"},
+		{"", "\n"},
 		{1, "1\n"},
 		{-1, "-1\n"},
 		{1.1, "1.1\n"},
@@ -65,8 +65,8 @@ var outputTests = map[string][]struct {
 		{map[interface{}]interface{}{"foo": "bar"}, "foo: bar\n"},
 	},
 	"smart": {
-		{nil, ""},
-		{"", ""},
+		{nil, "\n"},
+		{"", "\n"},
 		{1, "1\n"},
 		{-1, "-1\n"},
 		{1.1, "1.1\n"},
@@ -97,7 +97,7 @@ var outputTests = map[string][]struct {
 		{defaultValue, `{"Juju":1,"Puppet":false}` + "\n"},
 	},
 	"yaml": {
-		{nil, ""},
+		{nil, "\n"},
 		{"", `""` + "\n"},
 		{1, "1\n"},
 		{-1, "-1\n"},
