@@ -82,7 +82,11 @@ func FormatSmart(writer io.Writer, value interface{}) error {
 		}
 	case reflect.Slice:
 		if v.Type().Elem().Kind() == reflect.String {
-			_, err := fmt.Fprintln(writer, strings.Join(value.([]string), "\n"))
+			out := strings.Join(value.([]string), "\n")
+			if out != "" {
+				out += "\n"
+			}
+			_, err := fmt.Fprint(writer, out)
 			return err
 		}
 	case reflect.Bool:
