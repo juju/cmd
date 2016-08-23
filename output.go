@@ -36,8 +36,12 @@ func FormatYaml(writer io.Writer, value interface{}) error {
 		result = result[:i]
 	}
 
-	_, err = writer.Write(result)
-	return err
+	if len(result) > 0 {
+		result = append(result, '\n')
+		_, err = writer.Write(result)
+		return err
+	}
+	return nil
 }
 
 // FormatJson writes out value as json.
@@ -46,6 +50,7 @@ func FormatJson(writer io.Writer, value interface{}) error {
 	if err != nil {
 		return err
 	}
+	result = append(result, '\n')
 	_, err = writer.Write(result)
 	return err
 }
@@ -63,18 +68,21 @@ func FormatSmart(writer io.Writer, value interface{}) error {
 	v := reflect.ValueOf(value)
 	switch kind := v.Kind(); kind {
 	case reflect.String:
-		_, err := fmt.Fprint(writer, value)
+		if value == "" {
+			return nil
+		}
+		_, err := fmt.Fprintln(writer, value)
 		return err
 	case reflect.Array:
 		if v.Type().Elem().Kind() == reflect.String {
 			slice := reflect.MakeSlice(reflect.TypeOf([]string(nil)), v.Len(), v.Len())
 			reflect.Copy(slice, v)
-			_, err := fmt.Fprint(writer, strings.Join(slice.Interface().([]string), "\n"))
+			_, err := fmt.Fprintln(writer, strings.Join(slice.Interface().([]string), "\n"))
 			return err
 		}
 	case reflect.Slice:
 		if v.Type().Elem().Kind() == reflect.String {
-			_, err := fmt.Fprint(writer, strings.Join(value.([]string), "\n"))
+			_, err := fmt.Fprintln(writer, strings.Join(value.([]string), "\n"))
 			return err
 		}
 	case reflect.Bool:
@@ -82,11 +90,11 @@ func FormatSmart(writer io.Writer, value interface{}) error {
 		if value.(bool) {
 			result = "True"
 		}
-		_, err := fmt.Fprint(writer, result)
+		_, err := fmt.Fprintln(writer, result)
 		return err
 	case reflect.Float32, reflect.Float64:
 		sv := strconv.FormatFloat(value.(float64), 'f', -1, 64)
-		_, err := fmt.Fprint(writer, sv)
+		_, err := fmt.Fprintln(writer, sv)
 		return err
 	case reflect.Map:
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
@@ -186,7 +194,11 @@ func (c *Output) Write(ctx *Context, value interface{}) (err error) {
 	if err = c.formatter.format(target, value); err != nil {
 		return
 	}
-	fmt.Fprintln(target)
+	// If the formatter is not one of the default ones, add a new line at the end.
+	// This keeps consistent behaviour with the current code.
+	if _, found := DefaultFormatters[c.formatter.name]; !found {
+		fmt.Fprintln(target)
+	}
 	return
 }
 
