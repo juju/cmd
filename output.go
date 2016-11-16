@@ -8,9 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"reflect"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/juju/gnuflag"
@@ -65,48 +63,26 @@ func FormatSmart(writer io.Writer, value interface{}) error {
 	if value == nil {
 		return nil
 	}
-	v := reflect.ValueOf(value)
-	switch kind := v.Kind(); kind {
-	case reflect.String:
-		if value == "" {
-			return nil
+	valueStr := ""
+	switch value := value.(type) {
+	case string:
+		valueStr = value
+	case []string:
+		valueStr = strings.Join(value, "\n")
+	case bool:
+		if value {
+			valueStr = "True"
+		} else {
+			valueStr = "False"
 		}
-		_, err := fmt.Fprintln(writer, value)
-		return err
-	case reflect.Array:
-		if v.Type().Elem().Kind() == reflect.String {
-			slice := reflect.MakeSlice(reflect.TypeOf([]string(nil)), v.Len(), v.Len())
-			reflect.Copy(slice, v)
-			_, err := fmt.Fprintln(writer, strings.Join(slice.Interface().([]string), "\n"))
-			return err
-		}
-	case reflect.Slice:
-		if v.Type().Elem().Kind() == reflect.String {
-			out := strings.Join(value.([]string), "\n")
-			if out != "" {
-				out += "\n"
-			}
-			_, err := fmt.Fprint(writer, out)
-			return err
-		}
-	case reflect.Bool:
-		result := "False"
-		if value.(bool) {
-			result = "True"
-		}
-		_, err := fmt.Fprintln(writer, result)
-		return err
-	case reflect.Float32, reflect.Float64:
-		sv := strconv.FormatFloat(value.(float64), 'f', -1, 64)
-		_, err := fmt.Fprintln(writer, sv)
-		return err
-	case reflect.Map:
-	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-	case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
 	default:
-		return fmt.Errorf("cannot marshal %#v", value)
+		return FormatYaml(writer, value)
 	}
-	return FormatYaml(writer, value)
+	if valueStr == "" {
+		return nil
+	}
+	_, err := writer.Write([]byte(valueStr + "\n"))
+	return err
 }
 
 // DefaultFormatters holds the formatters that can be
