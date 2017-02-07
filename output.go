@@ -182,6 +182,27 @@ func (c *Output) AddFlags(f *gnuflag.FlagSet, defaultFormatter string, formatter
 // Write formats and outputs the value as directed by the --format and
 // --output command line flags.
 func (c *Output) Write(ctx *Context, value interface{}) (err error) {
+	formatterName := c.formatter.name
+	formatter := c.formatter.formatters[formatterName]
+	// If the formatter is not one of the default ones, add a new line at the end.
+	// This keeps consistent behaviour with the current code.
+	var newline bool
+	if _, found := DefaultFormatters[formatterName]; !found {
+		newline = true
+	}
+	if err := c.writeFormatter(ctx, formatter, value, newline); err != nil {
+		return err
+	}
+	return nil
+}
+
+// WriteFormatter formats and outputs the value with the given formatter,
+// to the output directed by the --output command line flag.
+func (c *Output) WriteFormatter(ctx *Context, formatter Formatter, value interface{}) (err error) {
+	return c.writeFormatter(ctx, formatter, value, false)
+}
+
+func (c *Output) writeFormatter(ctx *Context, formatter Formatter, value interface{}, newline bool) (err error) {
 	var target io.Writer
 	if c.outPath == "" {
 		target = ctx.Stdout
@@ -194,16 +215,13 @@ func (c *Output) Write(ctx *Context, value interface{}) (err error) {
 		defer f.Close()
 		target = f
 	}
-
-	if err = c.formatter.format(target, value); err != nil {
-		return
+	if err := formatter(target, value); err != nil {
+		return err
 	}
-	// If the formatter is not one of the default ones, add a new line at the end.
-	// This keeps consistent behaviour with the current code.
-	if _, found := DefaultFormatters[c.formatter.name]; !found {
+	if newline {
 		fmt.Fprintln(target)
 	}
-	return
+	return nil
 }
 
 func (c *Output) Name() string {
