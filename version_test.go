@@ -20,6 +20,7 @@ func (s *VersionSuite) TestVersion(c *gc.C) {
 		Stdout: &stdout,
 		Stderr: &stderr,
 	}
+
 	const version = "999.888.777"
 	code := Main(newVersionCommand(version), ctx, nil)
 	c.Check(code, gc.Equals, 0)
@@ -33,10 +34,11 @@ func (s *VersionSuite) TestVersionExtraArgs(c *gc.C) {
 		Stdout: &stdout,
 		Stderr: &stderr,
 	}
+
 	code := Main(newVersionCommand("xxx"), ctx, []string{"foo"})
 	c.Check(code, gc.Equals, 2)
 	c.Assert(stdout.String(), gc.Equals, "")
-	c.Assert(stderr.String(), gc.Matches, "error: unrecognized args.*\n")
+	c.Assert(stderr.String(), gc.Matches, "ERROR unrecognized args.*\n")
 }
 
 func (s *VersionSuite) TestVersionJson(c *gc.C) {
@@ -45,6 +47,7 @@ func (s *VersionSuite) TestVersionJson(c *gc.C) {
 		Stdout: &stdout,
 		Stderr: &stderr,
 	}
+
 	const version = "999.888.777"
 	code := Main(newVersionCommand(version), ctx, []string{"--format", "json"})
 	c.Check(code, gc.Equals, 0)

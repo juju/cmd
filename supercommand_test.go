@@ -238,14 +238,14 @@ func (s *SuperCommandSuite) TestVersionNotProvided(c *gc.C) {
 	// juju version
 	baselineCode := cmd.Main(jc, ctx, []string{"version"})
 	c.Check(baselineCode, gc.Not(gc.Equals), 0)
-	c.Assert(stderr.String(), gc.Equals, "error: unrecognized command: jujutest version\n")
+	c.Assert(stderr.String(), gc.Equals, "ERROR unrecognized command: jujutest version\n")
 	stderr.Reset()
 	stdout.Reset()
 
 	// juju --version
 	code := cmd.Main(jc, ctx, []string{"--version"})
 	c.Check(code, gc.Equals, baselineCode)
-	c.Assert(stderr.String(), gc.Equals, "error: flag provided but not defined: --version\n")
+	c.Assert(stderr.String(), gc.Equals, "ERROR flag provided but not defined: --version\n")
 }
 
 func (s *SuperCommandSuite) TestLogging(c *gc.C) {
@@ -285,7 +285,7 @@ func (s *SuperCommandSuite) TestNotifyRun(c *gc.C) {
 		sc.Register(&TestCommand{Name: "blah"})
 		ctx := cmdtesting.Context(c)
 		code := cmd.Main(sc, ctx, []string{"blah", "--option", "error"})
-		c.Assert(bufferString(ctx.Stderr), gc.Matches, "")
+		c.Assert(bufferString(ctx.Stderr), gc.Matches, "ERROR BAM!\n")
 		c.Assert(code, gc.Equals, 1)
 		c.Assert(notifyName, gc.Equals, test.expectName)
 	}
@@ -451,7 +451,7 @@ func (s *SuperCommandSuite) TestRegisterAlias(c *gc.C) {
 			stderr: "WARNING: \"bar\" is deprecated, please use \"test\"\n",
 		}, {
 			name:   "baz",
-			stderr: "error: unrecognized command: jujutest baz\n",
+			stderr: "ERROR unrecognized command: jujutest baz\n",
 			code:   2,
 		},
 	} {
@@ -516,7 +516,7 @@ func (s *SuperCommandSuite) TestRegisterSuperAlias(c *gc.C) {
 			stderr: "WARNING: \"bar-dep\" is deprecated, please use \"bar foo\"\n",
 		}, {
 			args:   []string{"bar-ob", "arg"},
-			stderr: "error: unrecognized command: jujutest bar-ob\n",
+			stderr: "ERROR unrecognized command: jujutest bar-ob\n",
 			code:   2,
 		},
 	} {
@@ -576,11 +576,11 @@ func (s *SuperCommandSuite) TestRegisterDeprecated(c *gc.C) {
 			stderr: "WARNING: \"test-dep-alias\" is deprecated, please use \"test-dep-new\"\n",
 		}, {
 			args:   []string{"test-ob", "arg"},
-			stderr: "error: unrecognized command: jujutest test-ob\n",
+			stderr: "ERROR unrecognized command: jujutest test-ob\n",
 			code:   2,
 		}, {
 			args:   []string{"test-ob-alias", "arg"},
-			stderr: "error: unrecognized command: jujutest test-ob-alias\n",
+			stderr: "ERROR unrecognized command: jujutest test-ob-alias\n",
 			code:   2,
 		},
 	} {

@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"github.com/juju/gnuflag"
+	"github.com/juju/loggo"
 )
 
 // RcPassthroughError indicates that a Juju plugin command exited with a
@@ -257,7 +258,7 @@ func handleCommandError(c Command, ctx *Context, err error, f *gnuflag.FlagSet) 
 	case ErrSilent:
 		return 2, true
 	default:
-		fmt.Fprintf(ctx.Stderr, "error: %v\n", err)
+		logger.Errorf("%v", err)
 		return 2, true
 	}
 }
@@ -266,6 +267,10 @@ func handleCommandError(c Command, ctx *Context, err error, f *gnuflag.FlagSet) 
 // arguments, which should not include the command name. It returns a code
 // suitable for passing to os.Exit.
 func Main(c Command, ctx *Context, args []string) int {
+	if _, err := loggo.ReplaceDefaultWriter(NewWarningWriter(ctx.Stderr)); err != nil {
+		panic(err)
+	}
+
 	f := gnuflag.NewFlagSet(c.Info().Name, gnuflag.ContinueOnError)
 	f.SetOutput(ioutil.Discard)
 	c.SetFlags(f)
@@ -282,7 +287,7 @@ func Main(c Command, ctx *Context, args []string) int {
 			return err.(*RcPassthroughError).Code
 		}
 		if err != ErrSilent {
-			fmt.Fprintf(ctx.Stderr, "error: %v\n", err)
+			logger.Errorf("%v", err)
 		}
 		return 1
 	}

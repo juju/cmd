@@ -15,9 +15,12 @@ import (
 
 	"github.com/juju/cmd"
 	"github.com/juju/cmd/cmdtesting"
+	"github.com/juju/testing"
 )
 
-type CmdSuite struct{}
+type CmdSuite struct {
+	testing.LoggingCleanupSuite
+}
 
 var _ = gc.Suite(&CmdSuite{})
 
@@ -80,7 +83,7 @@ func (s *CmdSuite) TestMainInitError(c *gc.C) {
 		result := cmd.Main(t.c, ctx, []string{"--unknown"})
 		c.Assert(result, gc.Equals, 2)
 		c.Assert(bufferString(ctx.Stdout), gc.Equals, "")
-		expected := "error: flag provided but not defined: --unknown\n"
+		expected := "ERROR flag provided but not defined: --unknown\n"
 		c.Assert(bufferString(ctx.Stderr), gc.Equals, expected)
 	}
 }
@@ -90,7 +93,7 @@ func (s *CmdSuite) TestMainRunError(c *gc.C) {
 	result := cmd.Main(&TestCommand{Name: "verb"}, ctx, []string{"--option", "error"})
 	c.Assert(result, gc.Equals, 1)
 	c.Assert(bufferString(ctx.Stdout), gc.Equals, "")
-	c.Assert(bufferString(ctx.Stderr), gc.Equals, "error: BAM!\n")
+	c.Assert(bufferString(ctx.Stderr), gc.Equals, "ERROR BAM!\n")
 }
 
 func (s *CmdSuite) TestMainRunSilentError(c *gc.C) {
