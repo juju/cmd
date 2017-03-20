@@ -46,7 +46,7 @@ type SuperCommandSuite struct {
 
 var _ = gc.Suite(&SuperCommandSuite{})
 
-const helpText = "\n    help\\s+- show help on a command or other topic"
+const helpText = "\n    help\\s+- Show help on a command or other topic."
 const helpCommandsText = "commands:" + helpText
 
 func (s *SuperCommandSuite) TestDispatch(c *gc.C) {
@@ -134,7 +134,7 @@ func (s *SuperCommandSuite) TestAliasesRegistered(c *gc.C) {
     flap - Alias for 'flip'.
     flip - flip the juju
     flop - Alias for 'flip'.
-    help - show help on a command or other topic`)
+    help - Show help on a command or other topic.`)
 }
 
 func (s *SuperCommandSuite) TestInfo(c *gc.C) {
@@ -430,7 +430,7 @@ func (s *SuperCommandSuite) TestRegisterAlias(c *gc.C) {
 	// NOTE: deprecated `bar` not shown in commands.
 	c.Assert(info.Doc, gc.Equals, `commands:
     foo  - Alias for 'test'.
-    help - show help on a command or other topic
+    help - Show help on a command or other topic.
     test - to be simple`)
 
 	for _, test := range []struct {
@@ -495,7 +495,7 @@ func (s *SuperCommandSuite) TestRegisterSuperAlias(c *gc.C) {
 	c.Assert(info.Doc, gc.Equals, `commands:
     bar     - bar functions
     bar-foo - Alias for 'bar foo'.
-    help    - show help on a command or other topic
+    help    - Show help on a command or other topic.
     test    - to be simple`)
 
 	for _, test := range []struct {
