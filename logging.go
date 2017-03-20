@@ -11,6 +11,7 @@ import (
 	"github.com/juju/ansiterm"
 	"github.com/juju/gnuflag"
 	"github.com/juju/loggo"
+	"github.com/juju/loggo/loggocolor"
 )
 
 // Log supplies the necessary functionality for Commands that wish to set up
@@ -35,7 +36,7 @@ func (l *Log) GetLogWriter(target io.Writer) loggo.Writer {
 	if l.NewWriter != nil {
 		return l.NewWriter(target)
 	}
-	return loggo.NewColorWriter(target)
+	return loggocolor.NewWriter(target)
 }
 
 // AddFlags adds appropriate flags to f.
@@ -146,6 +147,6 @@ func NewWarningWriter(writer io.Writer) loggo.Writer {
 // Write implements Writer.
 //   WARNING The message...
 func (w *warningWriter) Write(entry loggo.Entry) {
-	loggo.SeverityColor[entry.Level].Fprintf(w.writer, entry.Level.String())
+	loggocolor.SeverityColor[entry.Level].Fprintf(w.writer, entry.Level.String())
 	fmt.Fprintf(w.writer, " %s\n", entry.Message)
 }
