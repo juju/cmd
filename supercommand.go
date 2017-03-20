@@ -326,7 +326,7 @@ func (c *SuperCommand) Info() *Info {
 	}
 }
 
-const helpPurpose = "show help on a command or other topic"
+const helpPurpose = "Show help on a command or other topic."
 
 // SetCommonFlags creates a new "commonflags" flagset, whose
 // flags are shared with the argument f; this enables us to

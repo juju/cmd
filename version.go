@@ -23,7 +23,7 @@ func newVersionCommand(version string) *versionCommand {
 func (v *versionCommand) Info() *Info {
 	return &Info{
 		Name:    "version",
-		Purpose: "print the current version",
+		Purpose: "Print the current version.",
 	}
 }
 
