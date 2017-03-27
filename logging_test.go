@@ -229,3 +229,14 @@ func (s *LogSuite) TestOutputDebugForcesQuiet(c *gc.C) {
 
 	c.Assert(cmdtesting.Stderr(ctx), gc.Matches, `^.*INFO .* Writing info output\n.*INFO .*Writing verbose output\n.*`)
 }
+
+func (s *LogSuite) TestOutputWarning(c *gc.C) {
+	l := &cmd.Log{Verbose: true, Debug: true}
+	ctx := cmdtesting.Context(c)
+	err := l.Start(ctx)
+	c.Assert(err, gc.IsNil)
+
+	ctx.Warningf("Writing warning output")
+
+	c.Assert(cmdtesting.Stderr(ctx), gc.Matches, `^.* WARN .* Writing warning output\n.*`)
+}
