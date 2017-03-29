@@ -127,10 +127,27 @@ func (ctx *Context) write(format string, params ...interface{}) {
 // quiet is true the message is logged.
 func (ctx *Context) Infof(format string, params ...interface{}) {
 	if ctx.quiet {
-		logger.Infof(format, params...)
+		//Here we use the Loggo.logger method `Logf` as opposed to
+		//`logger.Infof` to avoid introducing an additional call stack
+		//level (since `Infof` calls `Logf` internally). This is done so
+		//that this function can produce more accurate source location
+		//debug information.
+		logger.Logf(loggo.INFO, format, params...)
 	} else {
 		ctx.write(format, params...)
 	}
+}
+
+// Warningf allows for the logging of messages, at the warning level, from a
+// command's context. This is useful for logging errors which do not cause a
+// command to fail (e.g. an error message used as a deprecation warning that
+// will be upgraded to a real error message at some point in the future.)
+func (ctx *Context) Warningf(format string, params ...interface{}) {
+	//Here we use the Loggo.logger method `Logf` as opposed to
+	//`logger.Warningf` to avoid introducing an additional call stack level
+	//(since `Warningf` calls Logf internally). This is done so that this
+	//function can produce more accurate source location debug information.
+	logger.Logf(loggo.WARNING, format, params...)
 }
 
 // Verbosef will write the formatted string to Stderr if the verbose is true,
@@ -139,7 +156,12 @@ func (ctx *Context) Verbosef(format string, params ...interface{}) {
 	if ctx.verbose {
 		ctx.write(format, params...)
 	} else {
-		logger.Infof(format, params...)
+		//Here we use the Loggo.logger method `Logf` as opposed to
+		//`logger.Infof` to avoid introducing an additional call stack
+		//level (since `Infof` calls `Logf` internally). This is done so
+		//that this function can produce more accurate source location
+		//debug information.
+		logger.Logf(loggo.INFO, format, params...)
 	}
 }
 
