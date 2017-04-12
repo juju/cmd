@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/juju/ansiterm"
 	"github.com/juju/gnuflag"
 	"github.com/juju/loggo"
 )
@@ -165,6 +166,14 @@ func (ctx *Context) Verbosef(format string, params ...interface{}) {
 	}
 }
 
+// WriteError will output the formatted text to the writer with
+// a colored ERROR like the logging would.
+func WriteError(writer io.Writer, err error) {
+	w := ansiterm.NewWriter(writer)
+	ansiterm.Foreground(ansiterm.BrightRed).Fprintf(w, "ERROR")
+	fmt.Fprintf(w, " %s\n", err.Error())
+}
+
 // Getenv looks up an environment variable in the context. It mirrors
 // os.Getenv. An empty string is returned if the key is not set.
 func (ctx *Context) Getenv(key string) string {
@@ -280,7 +289,7 @@ func handleCommandError(c Command, ctx *Context, err error, f *gnuflag.FlagSet) 
 	case ErrSilent:
 		return 2, true
 	default:
-		logger.Errorf("%v", err)
+		WriteError(ctx.Stderr, err)
 		return 2, true
 	}
 }
@@ -289,10 +298,6 @@ func handleCommandError(c Command, ctx *Context, err error, f *gnuflag.FlagSet) 
 // arguments, which should not include the command name. It returns a code
 // suitable for passing to os.Exit.
 func Main(c Command, ctx *Context, args []string) int {
-	if _, err := loggo.ReplaceDefaultWriter(NewWarningWriter(ctx.Stderr)); err != nil {
-		panic(err)
-	}
-
 	f := gnuflag.NewFlagSet(c.Info().Name, gnuflag.ContinueOnError)
 	f.SetOutput(ioutil.Discard)
 	c.SetFlags(f)
@@ -309,7 +314,7 @@ func Main(c Command, ctx *Context, args []string) int {
 			return err.(*RcPassthroughError).Code
 		}
 		if err != ErrSilent {
-			logger.Errorf("%v", err)
+			WriteError(ctx.Stderr, err)
 		}
 		return 1
 	}
