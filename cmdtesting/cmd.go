@@ -71,20 +71,22 @@ func Stderr(ctx *cmd.Context) string {
 // the actual running of the command.  Access to the resulting output streams
 // is provided through the returned context instance.
 func RunCommand(c *gc.C, com cmd.Command, args ...string) (*cmd.Context, error) {
-	if err := InitCommand(com, args); err != nil {
-		return nil, err
-	}
 	var context = Context(c)
-	return context, com.Run(context)
+	return runCommand(context, com, args)
 }
 
 // RunCommandInDir works like RunCommand, but runs with a context that uses dir.
 func RunCommandInDir(c *gc.C, com cmd.Command, args []string, dir string) (*cmd.Context, error) {
-	if err := InitCommand(com, args); err != nil {
-		return nil, err
-	}
 	var context = ContextForDir(c, dir)
-	return context, com.Run(context)
+	return runCommand(context, com, args)
+}
+
+func runCommand(ctx *cmd.Context, com cmd.Command, args []string) (*cmd.Context, error) {
+	if err := InitCommand(com, args); err != nil {
+		cmd.WriteError(ctx.Stderr, err)
+		return ctx, err
+	}
+	return ctx, com.Run(ctx)
 }
 
 // TestInit checks that a command initialises correctly with the given set of
@@ -96,4 +98,15 @@ func TestInit(c *gc.C, com cmd.Command, args []string, errPat string) {
 	} else {
 		c.Assert(err, gc.IsNil)
 	}
+}
+
+// HelpText returns a command's formatted help text.
+func HelpText(command cmd.Command, name string) string {
+	buff := &bytes.Buffer{}
+	info := command.Info()
+	info.Name = name
+	f := gnuflag.NewFlagSet(info.Name, gnuflag.ContinueOnError)
+	command.SetFlags(f)
+	buff.Write(info.Help(f))
+	return buff.String()
 }

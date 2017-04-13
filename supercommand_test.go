@@ -258,7 +258,7 @@ func (s *SuperCommandSuite) TestLogging(c *gc.C) {
 	ctx := cmdtesting.Context(c)
 	code := cmd.Main(sc, ctx, []string{"blah", "--option", "error", "--debug"})
 	c.Assert(code, gc.Equals, 1)
-	c.Assert(bufferString(ctx.Stderr), gc.Matches, `^.* ERROR .* BAM!\n.* DEBUG .* \(error details.*\).*\n`)
+	c.Assert(bufferString(ctx.Stderr), gc.Matches, `(?m)ERROR BAM!\n.* DEBUG .* error stack: \n.*`)
 }
 
 func (s *SuperCommandSuite) TestNotifyRun(c *gc.C) {

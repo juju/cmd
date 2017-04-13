@@ -1,56 +1,48 @@
 // Copyright 2012, 2013 Canonical Ltd.
 // Licensed under the LGPLv3, see LICENSE file for details.
 
-package cmd
+package cmd_test
 
 import (
-	"bytes"
 	"fmt"
 
+	"github.com/juju/testing"
 	gc "gopkg.in/check.v1"
+
+	"github.com/juju/cmd"
+	"github.com/juju/cmd/cmdtesting"
 )
 
-type VersionSuite struct{}
+type VersionSuite struct {
+	testing.LoggingSuite
+}
 
 var _ = gc.Suite(&VersionSuite{})
 
 func (s *VersionSuite) TestVersion(c *gc.C) {
-	var stdout, stderr bytes.Buffer
-	ctx := &Context{
-		Stdout: &stdout,
-		Stderr: &stderr,
-	}
-
 	const version = "999.888.777"
-	code := Main(newVersionCommand(version), ctx, nil)
+
+	ctx := cmdtesting.Context(c)
+	code := cmd.Main(cmd.NewVersionCommand(version), ctx, nil)
 	c.Check(code, gc.Equals, 0)
-	c.Assert(stderr.String(), gc.Equals, "")
-	c.Assert(stdout.String(), gc.Equals, version+"\n")
+	c.Assert(cmdtesting.Stderr(ctx), gc.Equals, "")
+	c.Assert(cmdtesting.Stdout(ctx), gc.Equals, version+"\n")
 }
 
 func (s *VersionSuite) TestVersionExtraArgs(c *gc.C) {
-	var stdout, stderr bytes.Buffer
-	ctx := &Context{
-		Stdout: &stdout,
-		Stderr: &stderr,
-	}
-
-	code := Main(newVersionCommand("xxx"), ctx, []string{"foo"})
+	ctx := cmdtesting.Context(c)
+	code := cmd.Main(cmd.NewVersionCommand("xxx"), ctx, []string{"foo"})
 	c.Check(code, gc.Equals, 2)
-	c.Assert(stdout.String(), gc.Equals, "")
-	c.Assert(stderr.String(), gc.Matches, "ERROR unrecognized args.*\n")
+	c.Assert(cmdtesting.Stdout(ctx), gc.Equals, "")
+	c.Assert(cmdtesting.Stderr(ctx), gc.Matches, "ERROR unrecognized args.*\n")
 }
 
 func (s *VersionSuite) TestVersionJson(c *gc.C) {
-	var stdout, stderr bytes.Buffer
-	ctx := &Context{
-		Stdout: &stdout,
-		Stderr: &stderr,
-	}
-
 	const version = "999.888.777"
-	code := Main(newVersionCommand(version), ctx, []string{"--format", "json"})
+
+	ctx := cmdtesting.Context(c)
+	code := cmd.Main(cmd.NewVersionCommand(version), ctx, []string{"--format", "json"})
 	c.Check(code, gc.Equals, 0)
-	c.Assert(stderr.String(), gc.Equals, "")
-	c.Assert(stdout.String(), gc.Equals, fmt.Sprintf("%q\n", version))
+	c.Assert(cmdtesting.Stderr(ctx), gc.Equals, "")
+	c.Assert(cmdtesting.Stdout(ctx), gc.Equals, fmt.Sprintf("%q\n", version))
 }
