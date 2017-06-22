@@ -17,6 +17,7 @@ import (
 	"github.com/juju/ansiterm"
 	"github.com/juju/gnuflag"
 	"github.com/juju/loggo"
+	"github.com/juju/utils"
 )
 
 // RcPassthroughError indicates that a Juju plugin command exited with a
@@ -191,8 +192,12 @@ func (ctx *Context) Setenv(key, value string) error {
 }
 
 // AbsPath returns an absolute representation of path, with relative paths
-// interpreted as relative to ctx.Dir.
+// interpreted as relative to ctx.Dir and with "~/" replaced with users
+// home dir.
 func (ctx *Context) AbsPath(path string) string {
+	if normalizedPath, err := utils.NormalizePath(path); err == nil {
+		path = normalizedPath
+	}
 	if filepath.IsAbs(path) {
 		return path
 	}

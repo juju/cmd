@@ -26,8 +26,11 @@ var _ = gc.Suite(&CmdSuite{})
 
 func (s *CmdSuite) TestContext(c *gc.C) {
 	ctx := cmdtesting.Context(c)
-	c.Assert(ctx.AbsPath("/foo/bar"), gc.Equals, "/foo/bar")
-	c.Assert(ctx.AbsPath("foo/bar"), gc.Equals, filepath.Join(ctx.Dir, "foo/bar"))
+	c.Check(ctx.AbsPath("/foo/bar"), gc.Equals, "/foo/bar")
+	c.Check(ctx.AbsPath("/foo/../bar"), gc.Equals, "/bar")
+	c.Check(ctx.AbsPath("foo/bar"), gc.Equals, filepath.Join(ctx.Dir, "foo/bar"))
+	homeDir := os.Getenv("HOME")
+	c.Check(ctx.AbsPath("~/foo/bar"), gc.Equals, filepath.Join(homeDir, "foo/bar"))
 }
 
 func (s *CmdSuite) TestContextGetenv(c *gc.C) {
