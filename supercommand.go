@@ -56,10 +56,15 @@ type SuperCommandParams struct {
 	// in the help output.
 	NotifyHelp func([]string)
 
-	Name            string
-	Purpose         string
-	Doc             string
-	Log             *Log
+	Name    string
+	Purpose string
+	Doc     string
+	// Log holds the Log value associated with the supercommand. If it's nil,
+	// no logging flags will be configured.
+	Log *Log
+	// GlobalFlags specifies a value that can add more global flags to the
+	// supercommand which will also be available on all subcommands.
+	GlobalFlags     FlagAdder
 	MissingCallback MissingCallback
 	Aliases         []string
 	Version         string
@@ -71,17 +76,25 @@ type SuperCommandParams struct {
 	UserAliasesFilename string
 }
 
+// FlagAdder represents a value that has associated flags.
+type FlagAdder interface {
+	// AddsFlags adds the value's flags to the given flag set.
+	AddFlags(*gnuflag.FlagSet)
+}
+
 // NewSuperCommand creates and initializes a new `SuperCommand`, and returns
 // the fully initialized structure.
 func NewSuperCommand(params SuperCommandParams) *SuperCommand {
 	command := &SuperCommand{
-		Name:                params.Name,
-		Purpose:             params.Purpose,
-		Doc:                 params.Doc,
-		Log:                 params.Log,
+		Name:    params.Name,
+		Purpose: params.Purpose,
+		Doc:     params.Doc,
+		Log:     params.Log,
+		Aliases: params.Aliases,
+
+		globalFlags:         params.GlobalFlags,
 		usagePrefix:         params.UsagePrefix,
 		missingCallback:     params.MissingCallback,
-		Aliases:             params.Aliases,
 		version:             params.Version,
 		notifyRun:           params.NotifyRun,
 		notifyHelp:          params.NotifyHelp,
@@ -94,7 +107,6 @@ func NewSuperCommand(params SuperCommandParams) *SuperCommand {
 // DeprecationCheck is used to provide callbacks to determine if
 // a command is deprecated or obsolete.
 type DeprecationCheck interface {
-
 	// Deprecated aliases emit a warning when executed. If the command is
 	// deprecated, the second return value recommends what to use instead.
 	Deprecated() (bool, string)
@@ -123,6 +135,7 @@ type SuperCommand struct {
 	Doc                 string
 	Log                 *Log
 	Aliases             []string
+	globalFlags         FlagAdder
 	version             string
 	usagePrefix         string
 	userAliasesFilename string
@@ -335,13 +348,16 @@ func (c *SuperCommand) SetCommonFlags(f *gnuflag.FlagSet) {
 	if c.Log != nil {
 		c.Log.AddFlags(f)
 	}
+	if c.globalFlags != nil {
+		c.globalFlags.AddFlags(f)
+	}
 	f.BoolVar(&c.showHelp, "h", false, helpPurpose)
 	f.BoolVar(&c.showHelp, "help", false, "")
 	// In the case where we are providing the basis for a plugin,
 	// plugins are required to support the --description argument.
 	// The Purpose attribute will be printed (if defined), allowing
 	// plugins to provide a sensible line of text for 'juju help plugins'.
-	f.BoolVar(&c.showDescription, "description", false, "")
+	f.BoolVar(&c.showDescription, "description", false, "Show short description of plugin, if any")
 	c.commonflags = gnuflag.NewFlagSet(c.Info().Name, gnuflag.ContinueOnError)
 	c.commonflags.SetOutput(ioutil.Discard)
 	f.VisitAll(func(flag *gnuflag.Flag) {
