@@ -592,3 +592,53 @@ func (s *SuperCommandSuite) TestRegisterDeprecated(c *gc.C) {
 		c.Check(cmdtesting.Stdout(ctx), gc.Equals, test.stdout)
 	}
 }
+
+func (s *SuperCommandSuite) TestGlobalFlagsBeforeCommand(c *gc.C) {
+	flag := ""
+	sc := cmd.NewSuperCommand(cmd.SuperCommandParams{
+		UsagePrefix: "juju",
+		Name:        "command",
+		GlobalFlags: flagAdderFunc(func(fset *gnuflag.FlagSet) {
+			fset.StringVar(&flag, "testflag", "", "global test flag")
+		}),
+		Log: &cmd.Log{},
+	})
+	sc.Register(&TestCommand{Name: "blah"})
+	ctx := cmdtesting.Context(c)
+	code := cmd.Main(sc, ctx, []string{
+		"--testflag=something",
+		"blah",
+		"--option=testoption",
+	})
+	c.Assert(code, gc.Equals, 0)
+	c.Assert(flag, gc.Equals, "something")
+	c.Check(cmdtesting.Stdout(ctx), gc.Equals, "testoption\n")
+}
+
+func (s *SuperCommandSuite) TestGlobalFlagsAfterCommand(c *gc.C) {
+	flag := ""
+	sc := cmd.NewSuperCommand(cmd.SuperCommandParams{
+		UsagePrefix: "juju",
+		Name:        "command",
+		GlobalFlags: flagAdderFunc(func(fset *gnuflag.FlagSet) {
+			fset.StringVar(&flag, "testflag", "", "global test flag")
+		}),
+		Log: &cmd.Log{},
+	})
+	sc.Register(&TestCommand{Name: "blah"})
+	ctx := cmdtesting.Context(c)
+	code := cmd.Main(sc, ctx, []string{
+		"blah",
+		"--option=testoption",
+		"--testflag=something",
+	})
+	c.Assert(code, gc.Equals, 0)
+	c.Assert(flag, gc.Equals, "something")
+	c.Check(cmdtesting.Stdout(ctx), gc.Equals, "testoption\n")
+}
+
+type flagAdderFunc func(*gnuflag.FlagSet)
+
+func (f flagAdderFunc) AddFlags(fset *gnuflag.FlagSet) {
+	f(fset)
+}
