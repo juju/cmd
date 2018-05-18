@@ -117,6 +117,13 @@ type Context struct {
 	verbose bool
 }
 
+// Quiet reports whether the command is in "quiet" mode. When
+// this is true, informational output should be suppressed (logger
+// messages can be used instead).
+func (ctx *Context) Quiet() bool {
+	return ctx.quiet
+}
+
 func (ctx *Context) write(format string, params ...interface{}) {
 	output := fmt.Sprintf(format, params...)
 	if !strings.HasSuffix(output, "\n") {
