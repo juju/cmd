@@ -8,13 +8,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-
-	"github.com/juju/gnuflag"
+	"strings"
 
 	gc "gopkg.in/check.v1"
 
 	"github.com/juju/cmd"
 	"github.com/juju/cmd/cmdtesting"
+	"github.com/juju/gnuflag"
 	"github.com/juju/testing"
 )
 
@@ -64,10 +64,11 @@ func (s *CmdSuite) TestInfo(c *gc.C) {
 	var ignored string
 	f.StringVar(&ignored, "option", "", "option-doc")
 	help = full.Info().Help(f)
-	c.Assert(string(help), gc.Equals, fullHelp)
+	c.Assert(string(help), gc.Equals, fmt.Sprintf(fullHelp, "flag", "Flag"))
 
 	optionInfo := full.Info()
 	optionInfo.Doc = ""
+	f.FlagKnownAs = "option"
 	help = optionInfo.Help(f)
 	c.Assert(string(help), gc.Equals, optionHelp)
 }
@@ -76,19 +77,29 @@ var initErrorTests = []struct {
 	c    *TestCommand
 	help string
 }{
-	{&TestCommand{Name: "verb"}, fullHelp},
+	{&TestCommand{Name: "verb"}, fmt.Sprintf(fullHelp, "flag", strings.Title("flag"))},
 	{&TestCommand{Name: "verb", Minimal: true}, minimalHelp},
 }
 
 func (s *CmdSuite) TestMainInitError(c *gc.C) {
+	expected := "ERROR flag provided but not defined: --unknown\n"
 	for _, t := range initErrorTests {
-		ctx := cmdtesting.Context(c)
-		result := cmd.Main(t.c, ctx, []string{"--unknown"})
-		c.Assert(result, gc.Equals, 2)
-		c.Assert(bufferString(ctx.Stdout), gc.Equals, "")
-		expected := "ERROR flag provided but not defined: --unknown\n"
-		c.Assert(bufferString(ctx.Stderr), gc.Equals, expected)
+		s.assertOptionError(c, t.c, expected)
 	}
+}
+
+func (s *CmdSuite) assertOptionError(c *gc.C, command *TestCommand, expected string) {
+	ctx := cmdtesting.Context(c)
+	result := cmd.Main(command, ctx, []string{"--unknown"})
+	c.Assert(result, gc.Equals, 2)
+	c.Assert(bufferString(ctx.Stdout), gc.Equals, "")
+	c.Assert(bufferString(ctx.Stderr), gc.Equals, expected)
+}
+
+func (s *CmdSuite) TestMainFlagsAKA(c *gc.C) {
+	s.assertOptionError(c,
+		&TestCommand{Name: "verb", FlagAKA: "option"},
+		"ERROR option provided but not defined: --unknown\n")
 }
 
 func (s *CmdSuite) TestMainRunError(c *gc.C) {
@@ -130,7 +141,17 @@ func (s *CmdSuite) TestMainHelp(c *gc.C) {
 		ctx := cmdtesting.Context(c)
 		result := cmd.Main(&TestCommand{Name: "verb"}, ctx, []string{arg})
 		c.Assert(result, gc.Equals, 0)
-		c.Assert(bufferString(ctx.Stdout), gc.Equals, fullHelp)
+		c.Assert(bufferString(ctx.Stdout), gc.Equals, fmt.Sprintf(fullHelp, "flag", "Flag"))
+		c.Assert(bufferString(ctx.Stderr), gc.Equals, "")
+	}
+}
+
+func (s *CmdSuite) TestMainHelpFlagsAKA(c *gc.C) {
+	for _, arg := range []string{"-h", "--help"} {
+		ctx := cmdtesting.Context(c)
+		result := cmd.Main(&TestCommand{Name: "verb", FlagAKA: "option"}, ctx, []string{arg})
+		c.Assert(result, gc.Equals, 0)
+		c.Assert(bufferString(ctx.Stdout), gc.Equals, fmt.Sprintf(fullHelp, "option", "Option"))
 		c.Assert(bufferString(ctx.Stderr), gc.Equals, "")
 	}
 }
@@ -181,10 +202,19 @@ func (s *CmdSuite) TestIsErrSilent(c *gc.C) {
 }
 
 func (s *CmdSuite) TestInfoHelp(c *gc.C) {
+	fs := gnuflag.NewFlagSet("", gnuflag.ContinueOnError)
+	s.assertFlagSetHelp(c, fs)
+}
+
+func (s *CmdSuite) TestInfoHelpFlagsAKA(c *gc.C) {
+	fs := gnuflag.NewFlagSetWithFlagKnownAs("", gnuflag.ContinueOnError, "item")
+	s.assertFlagSetHelp(c, fs)
+}
+
+func (s *CmdSuite) assertFlagSetHelp(c *gc.C, fs *gnuflag.FlagSet) {
 	// Test that white space is trimmed consistently from cmd.Info.Purpose
 	// (Help Summary) and cmd.Info.Doc (Help Details)
 	option := "option"
-	fs := gnuflag.NewFlagSet("", gnuflag.ContinueOnError)
 	fs.StringVar(&option, "option", "", "option-doc")
 
 	table := []struct {
@@ -205,7 +235,7 @@ func (s *CmdSuite) TestInfoHelp(c *gc.C) {
 
 		 `},
 	}
-	want := fullHelp
+	want := fmt.Sprintf(fullHelp, fs.FlagKnownAs, strings.Title(fs.FlagKnownAs))
 	for _, tv := range table {
 		i := cmd.Info{
 			Name:    "verb",

@@ -24,13 +24,17 @@ type helpCommand struct {
 }
 
 func (c *helpCommand) init() {
+	if c.super.FlagKnownAs == "" {
+		c.super.FlagKnownAs = "option"
+	}
+	flagKey := fmt.Sprintf("global-%vs", c.super.FlagKnownAs)
 	c.topics = map[string]topic{
 		"commands": {
 			short: "Basic help for all commands",
 			long:  func() string { return c.super.describeCommands(true) },
 		},
-		"global-options": {
-			short: "Options common to all commands",
+		flagKey: {
+			short: fmt.Sprintf("%vs common to all commands", strings.Title(c.super.FlagKnownAs)),
 			long:  func() string { return c.globalOptions() },
 		},
 		"topics": {
@@ -59,14 +63,14 @@ func (c *helpCommand) addTopic(name, short string, long func() string, aliases .
 
 func (c *helpCommand) globalOptions() string {
 	buf := &bytes.Buffer{}
-	fmt.Fprintf(buf, `Global Options
+	fmt.Fprintf(buf, `Global %vs
 
-These options may be used with any command, and may appear in front of any
+These %vs may be used with any command, and may appear in front of any
 command.
 
-`)
+`, strings.Title(c.super.FlagKnownAs), c.super.FlagKnownAs)
 
-	f := gnuflag.NewFlagSet("", gnuflag.ContinueOnError)
+	f := gnuflag.NewFlagSetWithFlagKnownAs("", gnuflag.ContinueOnError, c.super.FlagKnownAs)
 	c.super.SetCommonFlags(f)
 	f.SetOutput(buf)
 	f.PrintDefaults()
@@ -95,9 +99,10 @@ func (c *helpCommand) topicList() string {
 
 func (c *helpCommand) Info() *Info {
 	return &Info{
-		Name:    "help",
-		Args:    "[topic]",
-		Purpose: helpPurpose,
+		Name:        "help",
+		Args:        "[topic]",
+		FlagKnownAs: c.super.FlagKnownAs,
+		Purpose:     helpPurpose,
 		Doc: `
 See also: topics
 `,
@@ -166,7 +171,22 @@ func (c *helpCommand) getCommandHelp(super *SuperCommand, command Command, alias
 		logger.Tracef("adding super prefix")
 		info.Name = fmt.Sprintf("%s %s", super.usagePrefix, info.Name)
 	}
-	f := gnuflag.NewFlagSet(info.Name, gnuflag.ContinueOnError)
+
+	flagsAKA := info.FlagKnownAs
+	if flagsAKA == "" {
+		flagsAKA = super.FlagKnownAs
+	}
+	if flagsAKA == "" {
+		flagsAKA = super.Info().FlagKnownAs
+	}
+	if flagsAKA == "" {
+		flagsAKA = c.super.FlagKnownAs
+	}
+	if flagsAKA == "" {
+		// For backward compatibility, the default is 'flag'.
+		flagsAKA = "flag"
+	}
+	f := gnuflag.NewFlagSetWithFlagKnownAs(info.Name, gnuflag.ContinueOnError, flagsAKA)
 	command.SetFlags(f)
 	return info.Help(f)
 }
