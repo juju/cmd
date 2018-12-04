@@ -105,7 +105,13 @@ func HelpText(command cmd.Command, name string) string {
 	buff := &bytes.Buffer{}
 	info := command.Info()
 	info.Name = name
-	f := gnuflag.NewFlagSet(info.Name, gnuflag.ContinueOnError)
+	flagsAKA := info.FlagKnownAs
+	if flagsAKA == "" {
+		// For backward compatibility, the default is flags.
+		flagsAKA = "flag"
+	}
+
+	f := gnuflag.NewFlagSetWithFlagKnownAs(info.Name, gnuflag.ContinueOnError, flagsAKA)
 	command.SetFlags(f)
 	buff.Write(info.Help(f))
 	return buff.String()

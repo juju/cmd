@@ -25,19 +25,24 @@ type TestCommand struct {
 	Option  string
 	Minimal bool
 	Aliases []string
+	FlagAKA string
 }
 
 func (c *TestCommand) Info() *cmd.Info {
 	if c.Minimal {
 		return &cmd.Info{Name: c.Name}
 	}
-	return &cmd.Info{
+	i := &cmd.Info{
 		Name:    c.Name,
 		Args:    "<something>",
 		Purpose: c.Name + " the juju",
 		Doc:     c.Name + "-doc",
 		Aliases: c.Aliases,
 	}
+	if c.FlagAKA != "" {
+		i.FlagKnownAs = c.FlagAKA
+	}
+	return i
 }
 
 func (c *TestCommand) SetFlags(f *gnuflag.FlagSet) {
@@ -77,12 +82,12 @@ Options:
 --option (= "")
     option-doc
 `
-var fullHelp = `Usage: verb [options] <something>
+var fullHelp = `Usage: verb [%vs] <something>
 
 Summary:
 verb the juju
 
-Options:
+%vs:
 --option (= "")
     option-doc
 

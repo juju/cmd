@@ -246,6 +246,14 @@ func (s *SuperCommandSuite) TestVersionNotProvided(c *gc.C) {
 	code := cmd.Main(jc, ctx, []string{"--version"})
 	c.Check(code, gc.Equals, baselineCode)
 	c.Assert(stderr.String(), gc.Equals, "ERROR flag provided but not defined: --version\n")
+	stderr.Reset()
+	stdout.Reset()
+
+	// juju -version where flags are known as options
+	jc.FlagKnownAs = "option"
+	code = cmd.Main(jc, ctx, []string{"--version"})
+	c.Check(code, gc.Equals, baselineCode)
+	c.Assert(stderr.String(), gc.Equals, "ERROR option provided but not defined: --version\n")
 }
 
 func (s *SuperCommandSuite) TestLogging(c *gc.C) {

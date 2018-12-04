@@ -74,6 +74,13 @@ type SuperCommandParams struct {
 	// values, that is used to change default behaviour of commands in order
 	// to add flags, or provide short cuts to longer commands.
 	UserAliasesFilename string
+
+	// FlagKnownAs allows different projects to customise what their flags are
+	// known as, e.g. 'flag', 'option', 'item'. All error/log messages
+	// will use that name when referring to an individual items/flags in this command.
+	// For example, if this value is 'option', the default message 'value for flag'
+	// will become 'value for option'.
+	FlagKnownAs string
 }
 
 // FlagAdder represents a value that has associated flags.
@@ -99,6 +106,7 @@ func NewSuperCommand(params SuperCommandParams) *SuperCommand {
 		notifyRun:           params.NotifyRun,
 		notifyHelp:          params.NotifyHelp,
 		userAliasesFilename: params.UserAliasesFilename,
+		FlagKnownAs:         params.FlagKnownAs,
 	}
 	command.init()
 	return command
@@ -152,6 +160,13 @@ type SuperCommand struct {
 	missingCallback     MissingCallback
 	notifyRun           func(string)
 	notifyHelp          func([]string)
+
+	// FlagKnownAs allows different projects to customise what their flags are
+	// known as, e.g. 'flag', 'option', 'item'. All error/log messages
+	// will use that name when referring to an individual items/flags in this command.
+	// For example, if this value is 'option', the default message 'value for flag'
+	// will become 'value for option'.
+	FlagKnownAs string
 }
 
 // IsSuperCommand implements Command.IsSuperCommand
@@ -163,12 +178,16 @@ func (c *SuperCommand) init() {
 	if c.subcmds != nil {
 		return
 	}
+	if c.FlagKnownAs == "" {
+		// For backward compatibility, the default is 'flag'.
+		c.FlagKnownAs = "flag"
+	}
 	c.help = &helpCommand{
 		super: c,
 	}
 	c.help.init()
 	c.subcmds = map[string]commandReference{
-		"help": commandReference{command: c.help},
+		"help": {command: c.help},
 	}
 	if c.version != "" {
 		c.subcmds["version"] = commandReference{
@@ -331,11 +350,12 @@ func (c *SuperCommand) Info() *Info {
 		docParts = append(docParts, cmds)
 	}
 	return &Info{
-		Name:    c.Name,
-		Args:    "<command> ...",
-		Purpose: c.Purpose,
-		Doc:     strings.Join(docParts, "\n\n"),
-		Aliases: c.Aliases,
+		Name:        c.Name,
+		Args:        "<command> ...",
+		Purpose:     c.Purpose,
+		Doc:         strings.Join(docParts, "\n\n"),
+		Aliases:     c.Aliases,
+		FlagKnownAs: c.FlagKnownAs,
 	}
 }
 

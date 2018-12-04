@@ -252,6 +252,13 @@ type Info struct {
 
 	// Aliases are other names for the Command.
 	Aliases []string
+
+	// FlagKnownAs allows different projects to customise what their flags are
+	// known as, e.g. 'flag', 'option', 'item'. All error/log messages
+	// will use that name when referring to an individual items/flags in this command.
+	// For example, if this value is 'option', the default message 'value for flag'
+	// will become 'value for option'.
+	FlagKnownAs string
 }
 
 // Help renders i's content, along with documentation for any
@@ -262,7 +269,7 @@ func (i *Info) Help(f *gnuflag.FlagSet) []byte {
 	hasOptions := false
 	f.VisitAll(func(f *gnuflag.Flag) { hasOptions = true })
 	if hasOptions {
-		fmt.Fprintf(buf, " [options]")
+		fmt.Fprintf(buf, " [%vs]", f.FlagKnownAs)
 	}
 	if i.Args != "" {
 		fmt.Fprintf(buf, " %s", i.Args)
@@ -272,7 +279,7 @@ func (i *Info) Help(f *gnuflag.FlagSet) []byte {
 		fmt.Fprintf(buf, "\nSummary:\n%s\n", strings.TrimSpace(i.Purpose))
 	}
 	if hasOptions {
-		fmt.Fprintf(buf, "\nOptions:\n")
+		fmt.Fprintf(buf, "\n%vs:\n", strings.Title(f.FlagKnownAs))
 		f.SetOutput(buf)
 		f.PrintDefaults()
 	}
@@ -310,7 +317,13 @@ func handleCommandError(c Command, ctx *Context, err error, f *gnuflag.FlagSet) 
 // arguments, which should not include the command name. It returns a code
 // suitable for passing to os.Exit.
 func Main(c Command, ctx *Context, args []string) int {
-	f := gnuflag.NewFlagSet(c.Info().Name, gnuflag.ContinueOnError)
+	flagsAKA := c.Info().FlagKnownAs
+	if flagsAKA == "" {
+		// For backward compatibility, the default is 'flags'.
+		flagsAKA = "flag"
+	}
+
+	f := gnuflag.NewFlagSetWithFlagKnownAs(c.Info().Name, gnuflag.ContinueOnError, flagsAKA)
 	f.SetOutput(ioutil.Discard)
 	c.SetFlags(f)
 	if rc, done := handleCommandError(c, ctx, f.Parse(c.AllowInterspersedFlags(), args), f); done {
