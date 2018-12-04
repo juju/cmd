@@ -172,12 +172,18 @@ func (c *helpCommand) getCommandHelp(super *SuperCommand, command Command, alias
 		info.Name = fmt.Sprintf("%s %s", super.usagePrefix, info.Name)
 	}
 
-	flagsAKA := info.FlagKnownAs
+	flagsAKA := FlagAlias(command, "")
+	if flagsAKA == "" {
+		flagsAKA = FlagAlias(super, "")
+	}
 	if flagsAKA == "" {
 		flagsAKA = super.FlagKnownAs
 	}
 	if flagsAKA == "" {
-		flagsAKA = super.Info().FlagKnownAs
+		flagsAKA = FlagAlias(c, "")
+	}
+	if flagsAKA == "" {
+		flagsAKA = FlagAlias(c.super, "")
 	}
 	if flagsAKA == "" {
 		flagsAKA = c.super.FlagKnownAs

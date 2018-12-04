@@ -645,6 +645,24 @@ func (s *SuperCommandSuite) TestGlobalFlagsAfterCommand(c *gc.C) {
 	c.Check(cmdtesting.Stdout(ctx), gc.Equals, "testoption\n")
 }
 
+func (s *SuperCommandSuite) TestSuperSetFlags(c *gc.C) {
+	sc := cmd.NewSuperCommand(cmd.SuperCommandParams{
+		UsagePrefix: "juju",
+		Name:        "command",
+		Log:         &cmd.Log{},
+		FlagKnownAs: "option",
+	})
+	sc.Register(&TestCommand{Name: "blah"})
+	ctx := cmdtesting.Context(c)
+	code := cmd.Main(sc, ctx, []string{
+		"blah",
+		"--fluffs",
+	})
+	c.Assert(code, gc.Equals, 2)
+	c.Check(cmdtesting.Stdout(ctx), gc.Equals, "")
+	c.Check(cmdtesting.Stderr(ctx), gc.Equals, "ERROR option provided but not defined: --fluffs\n")
+}
+
 type flagAdderFunc func(*gnuflag.FlagSet)
 
 func (f flagAdderFunc) AddFlags(fset *gnuflag.FlagSet) {

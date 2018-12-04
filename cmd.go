@@ -313,17 +313,19 @@ func handleCommandError(c Command, ctx *Context, err error, f *gnuflag.FlagSet) 
 	}
 }
 
+func FlagAlias(c Command, akaDefault string) string {
+	flagsAKA := c.Info().FlagKnownAs
+	if flagsAKA == "" {
+		return akaDefault
+	}
+	return flagsAKA
+}
+
 // Main runs the given Command in the supplied Context with the given
 // arguments, which should not include the command name. It returns a code
 // suitable for passing to os.Exit.
 func Main(c Command, ctx *Context, args []string) int {
-	flagsAKA := c.Info().FlagKnownAs
-	if flagsAKA == "" {
-		// For backward compatibility, the default is 'flags'.
-		flagsAKA = "flag"
-	}
-
-	f := gnuflag.NewFlagSetWithFlagKnownAs(c.Info().Name, gnuflag.ContinueOnError, flagsAKA)
+	f := gnuflag.NewFlagSetWithFlagKnownAs(c.Info().Name, gnuflag.ContinueOnError, FlagAlias(c, "flag"))
 	f.SetOutput(ioutil.Discard)
 	c.SetFlags(f)
 	if rc, done := handleCommandError(c, ctx, f.Parse(c.AllowInterspersedFlags(), args), f); done {
