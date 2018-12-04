@@ -645,6 +645,37 @@ func (s *SuperCommandSuite) TestGlobalFlagsAfterCommand(c *gc.C) {
 	c.Check(cmdtesting.Stdout(ctx), gc.Equals, "testoption\n")
 }
 
+func (s *SuperCommandSuite) TestSuperSetFlags(c *gc.C) {
+	sc := cmd.NewSuperCommand(cmd.SuperCommandParams{
+		UsagePrefix: "juju",
+		Name:        "command",
+		Log:         &cmd.Log{},
+		FlagKnownAs: "option",
+	})
+	s.assertFlagsAlias(c, sc, "option")
+}
+
+func (s *SuperCommandSuite) TestSuperSetFlagsDefault(c *gc.C) {
+	sc := cmd.NewSuperCommand(cmd.SuperCommandParams{
+		UsagePrefix: "juju",
+		Name:        "command",
+		Log:         &cmd.Log{},
+	})
+	s.assertFlagsAlias(c, sc, "flag")
+}
+
+func (s *SuperCommandSuite) assertFlagsAlias(c *gc.C, sc *cmd.SuperCommand, expectedAlias string) {
+	sc.Register(&TestCommand{Name: "blah"})
+	ctx := cmdtesting.Context(c)
+	code := cmd.Main(sc, ctx, []string{
+		"blah",
+		"--fluffs",
+	})
+	c.Assert(code, gc.Equals, 2)
+	c.Check(cmdtesting.Stdout(ctx), gc.Equals, "")
+	c.Check(cmdtesting.Stderr(ctx), gc.Equals, fmt.Sprintf("ERROR %v provided but not defined: --fluffs\n", expectedAlias))
+}
+
 type flagAdderFunc func(*gnuflag.FlagSet)
 
 func (f flagAdderFunc) AddFlags(fset *gnuflag.FlagSet) {

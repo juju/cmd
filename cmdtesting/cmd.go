@@ -24,7 +24,8 @@ func NewFlagSet() *gnuflag.FlagSet {
 // InitCommand will create a new flag set, and call the Command's SetFlags and
 // Init methods with the appropriate args.
 func InitCommand(c cmd.Command, args []string) error {
-	f := NewFlagSet()
+	f := gnuflag.NewFlagSetWithFlagKnownAs(c.Info().Name, gnuflag.ContinueOnError, cmd.FlagAlias(c, "flag"))
+	f.SetOutput(ioutil.Discard)
 	c.SetFlags(f)
 	if err := f.Parse(c.AllowInterspersedFlags(), args); err != nil {
 		return err
@@ -105,13 +106,7 @@ func HelpText(command cmd.Command, name string) string {
 	buff := &bytes.Buffer{}
 	info := command.Info()
 	info.Name = name
-	flagsAKA := info.FlagKnownAs
-	if flagsAKA == "" {
-		// For backward compatibility, the default is flags.
-		flagsAKA = "flag"
-	}
-
-	f := gnuflag.NewFlagSetWithFlagKnownAs(info.Name, gnuflag.ContinueOnError, flagsAKA)
+	f := gnuflag.NewFlagSetWithFlagKnownAs(info.Name, gnuflag.ContinueOnError, cmd.FlagAlias(command, "flag"))
 	command.SetFlags(f)
 	buff.Write(info.Help(f))
 	return buff.String()

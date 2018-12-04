@@ -340,6 +340,7 @@ func (c *SuperCommand) Info() *Info {
 	if c.action.command != nil {
 		info := *c.action.command.Info()
 		info.Name = fmt.Sprintf("%s %s", c.Name, info.Name)
+		info.FlagKnownAs = c.FlagKnownAs
 		return &info
 	}
 	docParts := []string{}
@@ -378,7 +379,7 @@ func (c *SuperCommand) SetCommonFlags(f *gnuflag.FlagSet) {
 	// The Purpose attribute will be printed (if defined), allowing
 	// plugins to provide a sensible line of text for 'juju help plugins'.
 	f.BoolVar(&c.showDescription, "description", false, "Show short description of plugin, if any")
-	c.commonflags = gnuflag.NewFlagSet(c.Info().Name, gnuflag.ContinueOnError)
+	c.commonflags = gnuflag.NewFlagSetWithFlagKnownAs(c.Info().Name, gnuflag.ContinueOnError, FlagAlias(c, "flag"))
 	c.commonflags.SetOutput(ioutil.Discard)
 	f.VisitAll(func(flag *gnuflag.Flag) {
 		c.commonflags.Var(flag.Value, flag.Name, flag.Usage)
@@ -443,7 +444,7 @@ func (c *SuperCommand) Init(args []string) error {
 	args = args[1:]
 	subcmd := c.action.command
 	if subcmd.IsSuperCommand() {
-		f := gnuflag.NewFlagSet(c.Info().Name, gnuflag.ContinueOnError)
+		f := gnuflag.NewFlagSetWithFlagKnownAs(c.Info().Name, gnuflag.ContinueOnError, FlagAlias(subcmd, "flag"))
 		f.SetOutput(ioutil.Discard)
 		subcmd.SetFlags(f)
 	} else {
