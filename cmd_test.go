@@ -18,11 +18,12 @@ import (
 	"github.com/juju/testing"
 )
 
+var _ = gc.Suite(&CmdSuite{})
+var _ = gc.Suite(&CmdHelpSuite{})
+
 type CmdSuite struct {
 	testing.LoggingCleanupSuite
 }
-
-var _ = gc.Suite(&CmdSuite{})
 
 func (s *CmdSuite) TestContext(c *gc.C) {
 	ctx := cmdtesting.Context(c)
@@ -246,4 +247,125 @@ func (s *CmdSuite) assertFlagSetHelp(c *gc.C, fs *gnuflag.FlagSet) {
 		got := string(i.Help(fs))
 		c.Check(got, gc.Equals, want)
 	}
+}
+
+type CmdHelpSuite struct {
+	testing.LoggingCleanupSuite
+
+	superfs   *gnuflag.FlagSet
+	commandfs *gnuflag.FlagSet
+
+	info cmd.Info
+}
+
+func (s *CmdHelpSuite) SetUpTest(c *gc.C) {
+	s.LoggingCleanupSuite.SetUpTest(c)
+
+	addOptions := func(f *gnuflag.FlagSet, options []string) {
+		for _, a := range options {
+			option := a
+			f.StringVar(&option, option, "", "option-doc")
+		}
+	}
+
+	s.commandfs = gnuflag.NewFlagSet("", gnuflag.ContinueOnError)
+	addOptions(s.commandfs, []string{"one", "five", "three"})
+
+	s.superfs = gnuflag.NewFlagSet("", gnuflag.ContinueOnError)
+	addOptions(s.superfs, []string{"blackpanther", "captainamerica", "spiderman"})
+
+	s.info = cmd.Info{
+		Name:    "verb",
+		Args:    "<something>",
+		Purpose: "command purpose",
+		Doc:     "command details",
+	}
+}
+
+func (s *CmdHelpSuite) assertHelp(c *gc.C, expected string) {
+	got := string(s.info.HelpWithSuperFlags(s.superfs, s.commandfs))
+	c.Check(got, gc.Equals, expected)
+}
+
+var noSuperOptions = `
+Usage: verb [flags] <something>
+
+Summary:
+command purpose
+
+Flags:
+--five (= "")
+    option-doc
+--one (= "")
+    option-doc
+--three (= "")
+    option-doc
+
+Details:
+command details
+`[1:]
+
+func (s *CmdHelpSuite) TestNoSuperOptionsWanted(c *gc.C) {
+	got := string(s.info.Help(s.commandfs))
+	c.Check(got, gc.Equals, noSuperOptions)
+
+	s.assertHelp(c, noSuperOptions)
+}
+
+func (s *CmdHelpSuite) TestSuperDoesNotHaveDesiredOptions(c *gc.C) {
+	s.info.ShowSuperFlags = []string{"wanted"}
+	s.assertHelp(c, noSuperOptions)
+}
+
+func (s *CmdHelpSuite) TestSuperHasOneDesiredOption(c *gc.C) {
+	s.info.ShowSuperFlags = []string{"captainamerica"}
+	s.assertHelp(c, `
+Usage: verb [flags] <something>
+
+Summary:
+command purpose
+
+Global Flags:
+--captainamerica (= "")
+    option-doc
+
+Command Flags:
+--five (= "")
+    option-doc
+--one (= "")
+    option-doc
+--three (= "")
+    option-doc
+
+Details:
+command details
+`[1:])
+}
+
+func (s *CmdHelpSuite) TestSuperHasManyDesiredOptions(c *gc.C) {
+	s.superfs.FlagKnownAs = "option"
+	s.info.ShowSuperFlags = []string{"spiderman", "blackpanther"}
+	s.assertHelp(c, `
+Usage: verb [flags] <something>
+
+Summary:
+command purpose
+
+Global Options:
+--blackpanther (= "")
+    option-doc
+--spiderman (= "")
+    option-doc
+
+Command Flags:
+--five (= "")
+    option-doc
+--one (= "")
+    option-doc
+--three (= "")
+    option-doc
+
+Details:
+command details
+`[1:])
 }

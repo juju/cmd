@@ -194,7 +194,10 @@ func (c *helpCommand) getCommandHelp(super *SuperCommand, command Command, alias
 	}
 	f := gnuflag.NewFlagSetWithFlagKnownAs(info.Name, gnuflag.ContinueOnError, flagsAKA)
 	command.SetFlags(f)
-	return info.Help(f)
+
+	superf := gnuflag.NewFlagSetWithFlagKnownAs(super.Info().Name, gnuflag.ContinueOnError, flagsAKA)
+	super.SetFlags(superf)
+	return info.HelpWithSuperFlags(superf, f)
 }
 
 func (c *helpCommand) Run(ctx *Context) error {
