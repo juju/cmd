@@ -266,7 +266,7 @@ type Info struct {
 }
 
 // Help renders i's content, along with documentation for any
-// flags defined in f. It calls f.SetOutput(ioutil.Discard).
+// flags defined in f.
 func (i *Info) Help(f *gnuflag.FlagSet) []byte {
 	return i.HelpWithSuperFlags(nil, f)
 }
@@ -274,7 +274,6 @@ func (i *Info) Help(f *gnuflag.FlagSet) []byte {
 // HelpWithSuperFlags renders i's content, along with documentation for any
 // flags defined in both command and its super command flag sets.
 // Only super command flags defined in i.ShowSuperFlags are displayed, if found.
-// It calls FLagSet.SetOutput(ioutil.Discard).
 func (i *Info) HelpWithSuperFlags(superF *gnuflag.FlagSet, f *gnuflag.FlagSet) []byte {
 	buf := &bytes.Buffer{}
 	fmt.Fprintf(buf, "Usage: %s", i.Name)
@@ -301,13 +300,10 @@ func (i *Info) HelpWithSuperFlags(superF *gnuflag.FlagSet, f *gnuflag.FlagSet) [
 			}
 			return false
 		}
-		emptyFlag := &gnuflag.Flag{}
 		superF.VisitAll(func(flag *gnuflag.Flag) {
 			if contains(flag.Name) {
-				if found := filteredSuperF.Lookup(flag.Name); found == nil || found == emptyFlag {
-					hasSuperFlags = true
-					filteredSuperF.Var(flag.Value, flag.Name, flag.Usage)
-				}
+				hasSuperFlags = true
+				filteredSuperF.Var(flag.Value, flag.Name, flag.Usage)
 			}
 		})
 		if hasSuperFlags {
