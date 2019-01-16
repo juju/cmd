@@ -259,11 +259,22 @@ type Info struct {
 	// For example, if this value is 'option', the default message 'value for flag'
 	// will become 'value for option'.
 	FlagKnownAs string
+
+	// ShowSuperFlags contains the names of the 'super' command flags
+	// that are desired to be shown in the sub-command help output.
+	ShowSuperFlags []string
 }
 
 // Help renders i's content, along with documentation for any
-// flags defined in f. It calls f.SetOutput(ioutil.Discard).
+// flags defined in f.
 func (i *Info) Help(f *gnuflag.FlagSet) []byte {
+	return i.HelpWithSuperFlags(nil, f)
+}
+
+// HelpWithSuperFlags renders i's content, along with documentation for any
+// flags defined in both command and its super command flag sets.
+// Only super command flags defined in i.ShowSuperFlags are displayed, if found.
+func (i *Info) HelpWithSuperFlags(superF *gnuflag.FlagSet, f *gnuflag.FlagSet) []byte {
 	buf := &bytes.Buffer{}
 	fmt.Fprintf(buf, "Usage: %s", i.Name)
 	hasOptions := false
@@ -278,8 +289,37 @@ func (i *Info) Help(f *gnuflag.FlagSet) []byte {
 	if i.Purpose != "" {
 		fmt.Fprintf(buf, "\nSummary:\n%s\n", strings.TrimSpace(i.Purpose))
 	}
+	hasSuperFlags := false
+	if superF != nil && len(i.ShowSuperFlags) != 0 {
+		filteredSuperF := gnuflag.NewFlagSetWithFlagKnownAs("", gnuflag.ContinueOnError, superF.FlagKnownAs)
+		contains := func(one string) bool {
+			for _, a := range i.ShowSuperFlags {
+				if strings.ToLower(one) == strings.ToLower(a) {
+					return true
+				}
+			}
+			return false
+		}
+		superF.VisitAll(func(flag *gnuflag.Flag) {
+			if contains(flag.Name) {
+				hasSuperFlags = true
+				filteredSuperF.Var(flag.Value, flag.Name, flag.Usage)
+			}
+		})
+		if hasSuperFlags {
+			fmt.Fprintf(buf, "\nGlobal %vs:\n", strings.Title(filteredSuperF.FlagKnownAs))
+			filteredSuperF.SetOutput(buf)
+			filteredSuperF.PrintDefaults()
+			filteredSuperF.SetOutput(ioutil.Discard)
+		}
+	}
+
 	if hasOptions {
-		fmt.Fprintf(buf, "\n%vs:\n", strings.Title(f.FlagKnownAs))
+		if hasSuperFlags {
+			fmt.Fprintf(buf, "\nCommand %vs:\n", strings.Title(f.FlagKnownAs))
+		} else {
+			fmt.Fprintf(buf, "\n%vs:\n", strings.Title(f.FlagKnownAs))
+		}
 		f.SetOutput(buf)
 		f.PrintDefaults()
 	}
