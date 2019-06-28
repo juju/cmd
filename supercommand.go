@@ -68,6 +68,10 @@ type SuperCommandParams struct {
 	MissingCallback MissingCallback
 	Aliases         []string
 	Version         string
+	// VersionDetail is a freeform information that is output when the default version
+	// subcommand is passed --all. Output is formatted using the user-selected formatter.
+	// Exported fields should specify yaml and json field tags.
+	VersionDetail interface{}
 
 	// UserAliasesFilename refers to the location of a file that contains
 	//   name = cmd [args...]
@@ -103,6 +107,7 @@ func NewSuperCommand(params SuperCommandParams) *SuperCommand {
 		usagePrefix:         params.UsagePrefix,
 		missingCallback:     params.MissingCallback,
 		version:             params.Version,
+		versionDetail:       params.VersionDetail,
 		notifyRun:           params.NotifyRun,
 		notifyHelp:          params.NotifyHelp,
 		userAliasesFilename: params.UserAliasesFilename,
@@ -145,6 +150,7 @@ type SuperCommand struct {
 	Aliases             []string
 	globalFlags         FlagAdder
 	version             string
+	versionDetail       interface{}
 	usagePrefix         string
 	userAliasesFilename string
 	userAliases         map[string][]string
@@ -191,7 +197,7 @@ func (c *SuperCommand) init() {
 	}
 	if c.version != "" {
 		c.subcmds["version"] = commandReference{
-			command: newVersionCommand(c.version),
+			command: newVersionCommand(c.version, c.versionDetail),
 		}
 	}
 
