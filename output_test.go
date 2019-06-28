@@ -125,6 +125,32 @@ var outputTests = map[string][]struct {
 		{defaultValue, "juju: 1\npuppet: false\n"},
 		{overrideFormatter{cmd.FormatSmart, "abc\ndef"}, "abc\ndef\n"},
 	},
+	"yaml=ignored": {
+		{nil, ""},
+	},
+	`template="{{.}}"`: {
+		{nil, "<no value>"},
+		{"", ""},
+		{1, "1"},
+		{-1, "-1"},
+		{1.1, "1.1"},
+		{10000000, "10000000"},
+		{true, "true"},
+		{false, "false"},
+		{"hello", "hello"},
+		{"\n\n\n", "\n\n\n"},
+		{"foo: bar", "foo: bar"},
+		{[]string{}, "[]"},
+		{[]string{"blam", "dink"}, "[blam dink]"},
+		{defaultValue, "{1 false}"},
+		{overrideFormatter{cmd.FormatSmart, "abc\ndef"}, "abc\ndef\n"},
+	},
+	`template="{{.Puppet}}"`: {
+		{defaultValue, "false"},
+	},
+	`template="{{.Juju}}"`: {
+		{defaultValue, "1"},
+	},
 }
 
 func (s *CmdSuite) TestOutputFormat(c *gc.C) {
