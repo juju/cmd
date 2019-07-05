@@ -202,7 +202,7 @@ func (c *helpCommand) getCommandHelp(super *SuperCommand, command Command, alias
 
 func (c *helpCommand) Run(ctx *Context) error {
 	if c.super.showVersion {
-		v := newVersionCommand(c.super.version)
+		v := newVersionCommand(c.super.version, c.super.versionDetail)
 		v.SetFlags(c.super.flags)
 		v.Init(nil)
 		return v.Run(ctx)

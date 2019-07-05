@@ -10,13 +10,17 @@ import (
 // versionCommand is a cmd.Command that prints the current version.
 type versionCommand struct {
 	CommandBase
-	out     Output
-	version string
+	out           Output
+	version       string
+	versionDetail interface{}
+
+	showAll bool
 }
 
-func newVersionCommand(version string) *versionCommand {
+func newVersionCommand(version string, versionDetail interface{}) *versionCommand {
 	return &versionCommand{
-		version: version,
+		version:       version,
+		versionDetail: versionDetail,
 	}
 }
 
@@ -29,8 +33,12 @@ func (v *versionCommand) Info() *Info {
 
 func (v *versionCommand) SetFlags(f *gnuflag.FlagSet) {
 	v.out.AddFlags(f, "smart", DefaultFormatters)
+	f.BoolVar(&v.showAll, "all", false, "Prints all version information")
 }
 
 func (v *versionCommand) Run(ctxt *Context) error {
+	if v.showAll {
+		return v.out.Write(ctxt, v.versionDetail)
+	}
 	return v.out.Write(ctxt, v.version)
 }

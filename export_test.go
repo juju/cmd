@@ -3,6 +3,6 @@
 
 package cmd
 
-func NewVersionCommand(version string) Command {
-	return newVersionCommand(version)
+func NewVersionCommand(version string, versionDetail interface{}) Command {
+	return newVersionCommand(version, versionDetail)
 }
