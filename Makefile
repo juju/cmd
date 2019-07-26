@@ -7,5 +7,5 @@ check:
 	go test
 
 docs:
-	godoc2md github.com/juju/cmd > README.md
+	godoc2md gopkg.in/juju/cmd.v2 > README.md
 

@@ -12,8 +12,8 @@ import (
 
 	gc "gopkg.in/check.v1"
 
-	"github.com/juju/cmd"
-	"github.com/juju/cmd/cmdtesting"
+	"gopkg.in/juju/cmd.v2"
+	"gopkg.in/juju/cmd.v2/cmdtesting"
 	"github.com/juju/gnuflag"
 	"github.com/juju/testing"
 )
