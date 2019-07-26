@@ -16,8 +16,8 @@ import (
 	"github.com/juju/utils"
 	gc "gopkg.in/check.v1"
 
-	"github.com/juju/cmd"
-	"github.com/juju/cmd/cmdtesting"
+	"gopkg.in/juju/cmd.v2"
+	"gopkg.in/juju/cmd.v2/cmdtesting"
 )
 
 type FileVarSuite struct {

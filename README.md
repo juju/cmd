@@ -1,6 +1,6 @@
 
 # cmd
-    import "github.com/juju/cmd"
+    import "gopkg.in/juju/cmd.v2"
 
 
 
