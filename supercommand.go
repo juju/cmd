@@ -530,8 +530,8 @@ func (c *SuperCommand) FindClosestSubCommand(name string) (string, Command, bool
 		})
 	}
 
-	// ensure that we're dealing with the same command names, so we can give
-	// consistent results
+	// Ensure that we're dealing with the same command names, so we can give
+	// consistent results.
 	sort.Slice(matches, func(i, j int) bool {
 		return matches[i].Name < matches[j].Name
 	})
@@ -545,7 +545,7 @@ func (c *SuperCommand) FindClosestSubCommand(name string) (string, Command, bool
 		}
 	}
 
-	// if the matched value is less than the length+1 of the string, fail the
+	// If the matched value is less than the length+1 of the string, fail the
 	// match.
 	if _, ok := c.subcmds[matchedName]; ok && matchedName != "" && matchedValue < len(matchedName)+1 {
 		return matchedName, c.subcmds[matchedName].command, true
