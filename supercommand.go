@@ -518,17 +518,30 @@ func (c *SuperCommand) Run(ctx *Context) error {
 // far away from the size of the word, we disgard that and say a match isn't
 // relavent i.e. "foo" "barsomethingfoo" would not match
 func (c *SuperCommand) FindClosestSubCommand(name string) (string, Command, bool) {
-	matches := make(map[string]int)
-	for cmdName := range c.subcmds {
-		matches[cmdName] = levenshteinDistance(name, cmdName)
+	type Indexed = struct {
+		Name  string
+		Value int
 	}
+	matches := make([]Indexed, 0, len(c.subcmds))
+	for cmdName := range c.subcmds {
+		matches = append(matches, Indexed{
+			Name:  cmdName,
+			Value: levenshteinDistance(name, cmdName),
+		})
+	}
+
+	// ensure that we're dealing with the same command names, so we can give
+	// consistent results
+	sort.Slice(matches, func(i, j int) bool {
+		return matches[i].Name < matches[j].Name
+	})
 
 	var matchedName string
 	matchedValue := math.MaxInt64
-	for cmdName, value := range matches {
-		if value < matchedValue {
-			matchedName = cmdName
-			matchedValue = value
+	for _, indexed := range matches {
+		if indexed.Value < matchedValue {
+			matchedName = indexed.Name
+			matchedValue = indexed.Value
 		}
 	}
 
