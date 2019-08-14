@@ -746,3 +746,24 @@ func (s *SuperCommandSuite) TestFindClosestSubCommandReturnsWithMoreName(c *gc.C
 	c.Assert(ok, gc.Equals, true)
 	c.Assert(name, gc.Equals, "help")
 }
+
+func (s *SuperCommandSuite) TestFindClosestSubCommandReturnsConsistentResults(c *gc.C) {
+	sc := cmd.NewSuperCommand(cmd.SuperCommandParams{
+		UsagePrefix: "juju",
+		Name:        "command",
+		Log:         &cmd.Log{},
+	})
+	sc.Register(cmd.NewSuperCommand(cmd.SuperCommandParams{
+		UsagePrefix: "hxlp",
+		Name:        "hxlp",
+		Log:         &cmd.Log{},
+	}))
+	sc.Register(cmd.NewSuperCommand(cmd.SuperCommandParams{
+		UsagePrefix: "hflp",
+		Name:        "hflp",
+		Log:         &cmd.Log{},
+	}))
+	name, _, ok := sc.FindClosestSubCommand("helper")
+	c.Assert(ok, gc.Equals, true)
+	c.Assert(name, gc.Equals, "help")
+}
