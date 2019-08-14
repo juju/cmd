@@ -703,3 +703,46 @@ func (s *SuperCommandSuite) TestFindClosestSubCommandReturnsExactMatch(c *gc.C) 
 	c.Assert(ok, gc.Equals, true)
 	c.Assert(name, gc.Equals, "help")
 }
+
+func (s *SuperCommandSuite) TestFindClosestSubCommandReturnsNonExactMatch(c *gc.C) {
+	sc := cmd.NewSuperCommand(cmd.SuperCommandParams{
+		UsagePrefix: "juju",
+		Name:        "command",
+		Log:         &cmd.Log{},
+	})
+	_, _, ok := sc.FindClosestSubCommand("sillycommand")
+	c.Assert(ok, gc.Equals, false)
+}
+
+func (s *SuperCommandSuite) TestFindClosestSubCommandReturnsWithPartialName(c *gc.C) {
+	sc := cmd.NewSuperCommand(cmd.SuperCommandParams{
+		UsagePrefix: "juju",
+		Name:        "command",
+		Log:         &cmd.Log{},
+	})
+	name, _, ok := sc.FindClosestSubCommand("hel")
+	c.Assert(ok, gc.Equals, true)
+	c.Assert(name, gc.Equals, "help")
+}
+
+func (s *SuperCommandSuite) TestFindClosestSubCommandReturnsWithLessMisspeltName(c *gc.C) {
+	sc := cmd.NewSuperCommand(cmd.SuperCommandParams{
+		UsagePrefix: "juju",
+		Name:        "command",
+		Log:         &cmd.Log{},
+	})
+	name, _, ok := sc.FindClosestSubCommand("hlp")
+	c.Assert(ok, gc.Equals, true)
+	c.Assert(name, gc.Equals, "help")
+}
+
+func (s *SuperCommandSuite) TestFindClosestSubCommandReturnsWithMoreName(c *gc.C) {
+	sc := cmd.NewSuperCommand(cmd.SuperCommandParams{
+		UsagePrefix: "juju",
+		Name:        "command",
+		Log:         &cmd.Log{},
+	})
+	name, _, ok := sc.FindClosestSubCommand("helper")
+	c.Assert(ok, gc.Equals, true)
+	c.Assert(name, gc.Equals, "help")
+}

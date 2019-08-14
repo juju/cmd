@@ -520,7 +520,7 @@ func (c *SuperCommand) Run(ctx *Context) error {
 func (c *SuperCommand) FindClosestSubCommand(name string) (string, Command, bool) {
 	matches := make(map[string]int)
 	for cmdName := range c.subcmds {
-		matches[cmdName] = levenshteinDistance(cmdName, name)
+		matches[cmdName] = levenshteinDistance(name, cmdName)
 	}
 
 	var matchedName string
