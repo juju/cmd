@@ -626,7 +626,7 @@ func (c *missingCommand) Run(ctx *Context) error {
 	if !isUnrecognized {
 		return err
 	}
-	return UnrecognizedCommandf("%s %s", c.superName, c.name)
+	return DefaultUnrecognizedCommand(fmt.Sprintf("%s %s", c.superName, c.name))
 }
 
 // Deprecated calls into the check interface if one was specified,
