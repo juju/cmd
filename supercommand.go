@@ -25,12 +25,28 @@ type topic struct {
 	alias bool
 }
 
+// UnrecognizedCommand defines an error that specifies when a command is not
+// found.
 type UnrecognizedCommand struct {
-	Name string
+	message string
+}
+
+// UnrecognizedCommandf creates a UnrecognizedCommand with additional arguments
+// to create a bespoke message for the unrecognized command.
+func UnrecognizedCommandf(format string, args ...interface{}) *UnrecognizedCommand {
+	return &UnrecognizedCommand{
+		message: fmt.Sprintf(format, args...),
+	}
+}
+
+// DefaultUnrecognizedCommand creates a default message for using the
+// UnrecognizedCommand.
+func DefaultUnrecognizedCommand(name string) *UnrecognizedCommand {
+	return UnrecognizedCommandf("unrecognized command: %s", name)
 }
 
 func (e *UnrecognizedCommand) Error() string {
-	return fmt.Sprintf("unrecognized command: %s", e.Name)
+	return e.message
 }
 
 // MissingCallback defines a function that will be used by the SuperCommand if
@@ -610,7 +626,7 @@ func (c *missingCommand) Run(ctx *Context) error {
 	if !isUnrecognized {
 		return err
 	}
-	return &UnrecognizedCommand{c.superName + " " + c.name}
+	return UnrecognizedCommandf("%s %s", c.superName, c.name)
 }
 
 // Deprecated calls into the check interface if one was specified,
