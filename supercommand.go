@@ -6,7 +6,6 @@ package cmd
 import (
 	"fmt"
 	"io/ioutil"
-	"math"
 	"sort"
 	"strings"
 
@@ -534,6 +533,12 @@ func (c *SuperCommand) Run(ctx *Context) error {
 // far away from the size of the word, we disgard that and say a match isn't
 // relavent i.e. "foo" "barsomethingfoo" would not match
 func (c *SuperCommand) FindClosestSubCommand(name string) (string, Command, bool) {
+	// Exit early if there are no subcmds
+	if len(c.subcmds) == 0 {
+		return "", nil, false
+	}
+
+	// Attempt to find the closest match of a substring.
 	type Indexed = struct {
 		Name  string
 		Value int
@@ -545,21 +550,19 @@ func (c *SuperCommand) FindClosestSubCommand(name string) (string, Command, bool
 			Value: levenshteinDistance(name, cmdName),
 		})
 	}
-
-	// Ensure that we're dealing with the same command names, so we can give
-	// consistent results.
+	// Find the smallest levenshtein distance. If two values are the same,
+	// fallback to sorting on the name, which should give predictable results.
 	sort.Slice(matches, func(i, j int) bool {
+		if matches[i].Value < matches[j].Value {
+			return true
+		}
+		if matches[i].Value > matches[j].Value {
+			return false
+		}
 		return matches[i].Name < matches[j].Name
 	})
-
-	var matchedName string
-	matchedValue := math.MaxInt64
-	for _, indexed := range matches {
-		if indexed.Value < matchedValue {
-			matchedName = indexed.Name
-			matchedValue = indexed.Value
-		}
-	}
+	matchedName := matches[0].Name
+	matchedValue := matches[0].Value
 
 	// If the matched value is less than the length+1 of the string, fail the
 	// match.
