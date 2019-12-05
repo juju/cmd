@@ -108,13 +108,14 @@ func (c *CommandBase) AllowInterspersedFlags() bool {
 // should interpret file names relative to Dir (see AbsPath below), and print
 // output and errors to Stdout and Stderr respectively.
 type Context struct {
-	Dir     string
-	Env     map[string]string
-	Stdin   io.Reader
-	Stdout  io.Writer
-	Stderr  io.Writer
-	quiet   bool
-	verbose bool
+	Dir         string
+	Env         map[string]string
+	Stdin       io.Reader
+	Stdout      io.Writer
+	Stderr      io.Writer
+	quiet       bool
+	writeOutput func(err error) bool
+	verbose     bool
 }
 
 // Quiet reports whether the command is in "quiet" mode. When
@@ -381,7 +382,9 @@ func Main(c Command, ctx *Context, args []string) int {
 			return err.(*RcPassthroughError).Code
 		}
 		if err != ErrSilent {
-			WriteError(ctx.Stderr, err)
+			if !ctx.writeOutput(err) {
+				WriteError(ctx.Stderr, err)
+			}
 		}
 		return 1
 	}
