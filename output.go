@@ -42,9 +42,50 @@ func FormatYaml(writer io.Writer, value interface{}) error {
 	return nil
 }
 
+// FormatYaml writes out value as yaml to the writer, unless value is nil.
+func FormatErrYaml(writer io.Writer, value interface{}) error {
+	if value == nil {
+		return nil
+	}
+	msg := value.(error).Error()
+	result, err := goyaml.Marshal(ErrorResponse{ErrorMsg: msg})
+	if err != nil {
+		return err
+	}
+	for i := len(result) - 1; i > 0; i-- {
+		if result[i] != '\n' {
+			break
+		}
+		result = result[:i]
+	}
+
+	if len(result) > 0 {
+		result = append(result, '\n')
+		_, err = writer.Write(result)
+		return err
+	}
+	return nil
+}
+
 // FormatJson writes out value as json.
 func FormatJson(writer io.Writer, value interface{}) error {
 	result, err := json.Marshal(value)
+	if err != nil {
+		return err
+	}
+	result = append(result, '\n')
+	_, err = writer.Write(result)
+	return err
+}
+
+type ErrorResponse struct {
+	ErrorMsg string
+}
+
+// FormatJson writes out value as json.
+func FormatErrJson(writer io.Writer, value interface{}) error {
+	msg := value.(error).Error()
+	result, err := json.Marshal(ErrorResponse{ErrorMsg: msg})
 	if err != nil {
 		return err
 	}
@@ -91,6 +132,13 @@ var DefaultFormatters = map[string]Formatter{
 	"smart": FormatSmart,
 	"yaml":  FormatYaml,
 	"json":  FormatJson,
+}
+
+// DefaultErrorFormatters holds the formatters that can be
+// specified with the --format flag.
+var DefaultErrorFormatters = map[string]Formatter{
+	"yaml": FormatErrYaml,
+	"json": FormatErrJson,
 }
 
 // formatterValue implements gnuflag.Value for the --format flag.
