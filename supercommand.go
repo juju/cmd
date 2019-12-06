@@ -514,7 +514,11 @@ func (c *SuperCommand) Run(ctx *Context) error {
 	}
 	err := c.action.command.Run(ctx)
 	if err != nil && !IsErrSilent(err) {
-		WriteError(ctx.Stderr, err)
+		if IsErrSilentPrintError(err) {
+			Write(ctx.Stderr, err)
+		} else {
+			WriteError(ctx.Stderr, err)
+		}
 		logger.Debugf("error stack: \n%v", errors.ErrorStack(err))
 		// Now that this has been logged, don't log again in cmd.Main.
 		if !IsRcPassthroughError(err) {

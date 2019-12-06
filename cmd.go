@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"github.com/juju/ansiterm"
+	errors2 "github.com/juju/errors"
 	"github.com/juju/gnuflag"
 	"github.com/juju/loggo"
 	"github.com/juju/utils"
@@ -48,9 +49,29 @@ func NewRcPassthroughError(code int) error {
 // code 1 without producing error output.
 var ErrSilent = errors.New("cmd: error out silently")
 
+// ErrSilentPrint can be returned from Run to signal that Main should exit with
+// code 1 with printing the error message, without indicating directly that this was an error
+type ErrSilentPrint struct {
+	Msg  string
+	Code int
+}
+
+func IsErrSilentPrintError(err error) bool {
+	_, ok := errors2.Cause(err).(*ErrSilentPrint)
+	return ok
+}
+
+// Error implements error.
+func (e *ErrSilentPrint) Error() string {
+	return e.Msg
+}
+
 // IsErrSilent returns whether the error should be logged from cmd.Main.
 func IsErrSilent(err error) bool {
 	if err == ErrSilent {
+		return true
+	}
+	if errors2.Cause(err) == ErrSilent {
 		return true
 	}
 	if _, ok := err.(*RcPassthroughError); ok {
@@ -179,6 +200,12 @@ func (ctx *Context) Verbosef(format string, params ...interface{}) {
 func WriteError(writer io.Writer, err error) {
 	w := ansiterm.NewWriter(writer)
 	ansiterm.Foreground(ansiterm.BrightRed).Fprintf(w, "ERROR")
+	fmt.Fprintf(w, " %s\n", err.Error())
+}
+
+// Write will output the formatted text to the writer
+func Write(writer io.Writer, err error) {
+	w := ansiterm.NewWriter(writer)
 	fmt.Fprintf(w, " %s\n", err.Error())
 }
 
@@ -380,7 +407,7 @@ func Main(c Command, ctx *Context, args []string) int {
 		if IsRcPassthroughError(err) {
 			return err.(*RcPassthroughError).Code
 		}
-		if err != ErrSilent {
+		if !IsErrSilent(err) {
 			WriteError(ctx.Stderr, err)
 		}
 		return 1
