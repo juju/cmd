@@ -182,6 +182,7 @@ type SuperCommand struct {
 	missingCallback     MissingCallback
 	notifyRun           func(string)
 	notifyHelp          func([]string)
+	formattingType      string
 
 	// FlagKnownAs allows different projects to customise what their flags are
 	// known as, e.g. 'flag', 'option', 'item'. All error/log messages
@@ -481,6 +482,7 @@ func (c *SuperCommand) Init(args []string) error {
 		args = []string{c.action.name}
 		c.action = c.subcmds["help"]
 	}
+	c.parseFormattingFlag()
 	return c.action.command.Init(args)
 }
 
@@ -514,7 +516,7 @@ func (c *SuperCommand) Run(ctx *Context) error {
 	}
 	err := c.action.command.Run(ctx)
 	if err != nil && !IsErrSilent(err) {
-		formatter := c.hasFormattingFlag()
+		formatter := DefaultErrorFormatters[c.formattingType]
 		if formatter != nil {
 			_ = formatter(ctx.Stderr, err)
 			return nil
@@ -532,11 +534,9 @@ func (c *SuperCommand) Run(ctx *Context) error {
 	return err
 }
 
-func (c *SuperCommand) hasFormattingFlag() Formatter {
-	var formattingType string
-	c.flags.StringVar(&formattingType, "format", "", "")
+func (c *SuperCommand) parseFormattingFlag() {
+	c.flags.StringVar(&c.formattingType, "format", "", "")
 	_ = c.flags.Parse(true, c.flags.Args())
-	return DefaultErrorFormatters[formattingType]
 }
 
 // FindClosestSubCommand attempts to find a sub command by a given name.

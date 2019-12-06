@@ -17,6 +17,7 @@ import (
 
 // Formatter writes the arbitrary object into the writer.
 type Formatter func(writer io.Writer, value interface{}) error
+type ErrFormatter func(writer io.Writer, err error) error
 
 // FormatYaml writes out value as yaml to the writer, unless value is nil.
 func FormatYaml(writer io.Writer, value interface{}) error {
@@ -43,20 +44,14 @@ func FormatYaml(writer io.Writer, value interface{}) error {
 }
 
 // FormatYaml writes out value as yaml to the writer, unless value is nil.
-func FormatErrYaml(writer io.Writer, value interface{}) error {
-	if value == nil {
-		return nil
+func FormatErrYaml(writer io.Writer, err error) error {
+	code := 1
+	if IsRcPassthroughError(err) {
+		code = err.(*RcPassthroughError).Code
 	}
-	msg := value.(error).Error()
-	result, err := goyaml.Marshal(ErrorResponse{ErrorMsg: msg})
+	result, err := goyaml.Marshal(ErrorResponse{ErrorMsg: err.Error(), ExitCode: code})
 	if err != nil {
 		return err
-	}
-	for i := len(result) - 1; i > 0; i-- {
-		if result[i] != '\n' {
-			break
-		}
-		result = result[:i]
 	}
 
 	if len(result) > 0 {
@@ -79,13 +74,17 @@ func FormatJson(writer io.Writer, value interface{}) error {
 }
 
 type ErrorResponse struct {
-	ErrorMsg string
+	ErrorMsg string `yaml:"error-msg" json:"error-msg"`
+	ExitCode int    `yaml:"exit-code" json:"exit-code"`
 }
 
 // FormatJson writes out value as json.
-func FormatErrJson(writer io.Writer, value interface{}) error {
-	msg := value.(error).Error()
-	result, err := json.Marshal(ErrorResponse{ErrorMsg: msg})
+func FormatErrJson(writer io.Writer, err error) error {
+	code := 1
+	if IsRcPassthroughError(err) {
+		code = err.(*RcPassthroughError).Code
+	}
+	result, err := json.Marshal(ErrorResponse{ErrorMsg: err.Error(), ExitCode: code})
 	if err != nil {
 		return err
 	}
@@ -136,7 +135,7 @@ var DefaultFormatters = map[string]Formatter{
 
 // DefaultErrorFormatters holds the formatters that can be
 // specified with the --format flag.
-var DefaultErrorFormatters = map[string]Formatter{
+var DefaultErrorFormatters = map[string]ErrFormatter{
 	"yaml": FormatErrYaml,
 	"json": FormatErrJson,
 }
