@@ -514,9 +514,18 @@ func (c *SuperCommand) Run(ctx *Context) error {
 	}
 	err := c.action.command.Run(ctx)
 	if err != nil && !IsErrSilent(err) {
+		handleErr, done := c.handleFormattingDirective(ctx)
+		if handleErr != nil {
+			return handleErr
+		}
+		if done {
+			logger.Debugf("error stack: \n%v", errors.ErrorStack(err))
+			return nil
+		}
 		WriteError(ctx.Stderr, err)
 		logger.Debugf("error stack: \n%v", errors.ErrorStack(err))
-		// Now that this has been logged, don't log again in cmd.Main.
+
+		// Err has been logged above, we can make the err silent so it does not log again in cmd/main
 		if !IsRcPassthroughError(err) {
 			err = ErrSilent
 		}
@@ -524,6 +533,22 @@ func (c *SuperCommand) Run(ctx *Context) error {
 		logger.Infof("command finished")
 	}
 	return err
+}
+
+func (c *SuperCommand) handleFormattingDirective(ctx *Context) (error, bool) {
+	f := c.commonflags.Lookup("format")
+	if f == nil {
+		return nil, false
+	}
+	formatter := DefaultErrorFormatters[f.Value.String()]
+	if formatter == nil {
+		return nil, false
+	}
+	err := formatter(ctx.Stderr)
+	if err != nil {
+		return err, true
+	}
+	return ErrSilent, true
 }
 
 // FindClosestSubCommand attempts to find a sub command by a given name.

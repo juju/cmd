@@ -47,6 +47,10 @@ type overrideFormatter struct {
 	value     interface{}
 }
 
+type overrideErrFormatter struct {
+	formatter cmd.ErrFormatter
+}
+
 // use a struct to control field ordering.
 var defaultValue = struct {
 	Juju   int
@@ -107,6 +111,7 @@ var outputTests = map[string][]struct {
 		{[]string{"blam", "dink"}, `["blam","dink"]` + "\n"},
 		{defaultValue, `{"Juju":1,"Puppet":false}` + "\n"},
 		{overrideFormatter{cmd.FormatSmart, "abc\ndef"}, "abc\ndef\n"},
+		{overrideErrFormatter{cmd.FormatErrJson}, "{}\n"},
 	},
 	"yaml": {
 		{nil, ""},
@@ -124,6 +129,7 @@ var outputTests = map[string][]struct {
 		{[]string{"blam", "dink"}, "- blam\n- dink\n"},
 		{defaultValue, "juju: 1\npuppet: false\n"},
 		{overrideFormatter{cmd.FormatSmart, "abc\ndef"}, "abc\ndef\n"},
+		{overrideErrFormatter{cmd.FormatErrYaml,}, "{}\n"},
 	},
 }
 
