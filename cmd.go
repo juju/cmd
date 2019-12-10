@@ -343,11 +343,23 @@ func handleCommandError(c Command, ctx *Context, err error, f *gnuflag.FlagSet) 
 	case nil:
 		return 0, false
 	case gnuflag.ErrHelp:
-		ctx.Stdout.Write(c.Info().Help(f))
+		_, err := ctx.Stdout.Write(c.Info().Help(f))
+		if err != nil {
+			logger.Errorf("problem trying to write to stdout: %v", err)
+		}
 		return 0, true
 	case ErrSilent:
 		return 2, true
 	default:
+		name := parseFlag("format", f.Args())
+		handleErr, done := handleFormattingDirective(name, ctx)
+		if handleErr != nil && handleErr != ErrSilent {
+			logger.Errorf("unexpected err : %v", err)
+			return 2, true
+		}
+		if done {
+			return 2, true
+		}
 		WriteError(ctx.Stderr, err)
 		return 2, true
 	}
@@ -386,6 +398,24 @@ func Main(c Command, ctx *Context, args []string) int {
 		return 1
 	}
 	return 0
+}
+
+// parseFlag tries to parse a value of flags, if it cannot the returned string is empty
+func parseFlag(name string, args []string) string {
+	// long flag signified with "--" prefix
+	var wantedVal string
+	for _, value := range args {
+		var wantedKey string
+		if value[1] == '-' && strings.Contains(value, name) {
+			i := strings.Index(value, "=")
+			wantedKey = strings.Trim(value[:i], "-")
+			if name == wantedKey {
+				wantedVal = value[i+1:]
+				return wantedVal
+			}
+		}
+	}
+	return wantedVal
 }
 
 // DefaultContext returns a Context suitable for use in non-hosted situations.

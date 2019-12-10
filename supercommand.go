@@ -514,14 +514,18 @@ func (c *SuperCommand) Run(ctx *Context) error {
 	}
 	err := c.action.command.Run(ctx)
 	if err != nil && !IsErrSilent(err) {
-		handleErr, done := c.handleFormattingDirective(ctx)
-		if handleErr != nil {
-			return handleErr
+		f := c.commonflags.Lookup("format")
+		if f != nil {
+			handleErr, done := handleFormattingDirective(f.Value.String(), ctx)
+			if handleErr != nil {
+				return handleErr
+			}
+			if done {
+				logger.Debugf("error stack: \n%v", errors.ErrorStack(err))
+				return nil
+			}
 		}
-		if done {
-			logger.Debugf("error stack: \n%v", errors.ErrorStack(err))
-			return nil
-		}
+
 		WriteError(ctx.Stderr, err)
 		logger.Debugf("error stack: \n%v", errors.ErrorStack(err))
 
@@ -535,12 +539,8 @@ func (c *SuperCommand) Run(ctx *Context) error {
 	return err
 }
 
-func (c *SuperCommand) handleFormattingDirective(ctx *Context) (error, bool) {
-	f := c.commonflags.Lookup("format")
-	if f == nil {
-		return nil, false
-	}
-	formatter := DefaultErrorFormatters[f.Value.String()]
+func handleFormattingDirective(formattingType string, ctx *Context) (error, bool) {
+	formatter := DefaultErrorFormatters[formattingType]
 	if formatter == nil {
 		return nil, false
 	}
@@ -548,6 +548,7 @@ func (c *SuperCommand) handleFormattingDirective(ctx *Context) (error, bool) {
 	if err != nil {
 		return err, true
 	}
+	// we successfully handled the error we don't want cmd/main to print it out again
 	return ErrSilent, true
 }
 
