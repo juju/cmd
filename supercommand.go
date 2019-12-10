@@ -182,7 +182,6 @@ type SuperCommand struct {
 	missingCallback     MissingCallback
 	notifyRun           func(string)
 	notifyHelp          func([]string)
-	formattingType      string
 
 	// FlagKnownAs allows different projects to customise what their flags are
 	// known as, e.g. 'flag', 'option', 'item'. All error/log messages
@@ -482,11 +481,7 @@ func (c *SuperCommand) Init(args []string) error {
 		args = []string{c.action.name}
 		c.action = c.subcmds["help"]
 	}
-	err := c.action.command.Init(args)
-	if err != nil {
-		return err
-	}
-	return c.parseFormattingFlag()
+	return c.action.command.Init(args)
 }
 
 // Run executes the subcommand that was selected in Init.
@@ -519,19 +514,18 @@ func (c *SuperCommand) Run(ctx *Context) error {
 	}
 	err := c.action.command.Run(ctx)
 	if err != nil && !IsErrSilent(err) {
-		formatter := DefaultErrorFormatters[c.formattingType]
-		if formatter != nil {
-			logger.Debugf("error stack: \n%v", errors.ErrorStack(err))
-			err = formatter(ctx.Stderr)
-			if err != nil {
-				return err
-			}
-			return ErrSilent
+		handleErr, done := c.handleFormattingDirective(ctx)
+		if handleErr != nil {
+			return handleErr
 		}
-
+		if done {
+			logger.Debugf("error stack: \n%v", errors.ErrorStack(err))
+			return nil
+		}
 		WriteError(ctx.Stderr, err)
 		logger.Debugf("error stack: \n%v", errors.ErrorStack(err))
-		// Now that this has been logged, don't log again in cmd.Main.
+
+		// Err has been logged above, we can make the err silent so it does not log again in cmd/main
 		if !IsRcPassthroughError(err) {
 			err = ErrSilent
 		}
@@ -541,18 +535,20 @@ func (c *SuperCommand) Run(ctx *Context) error {
 	return err
 }
 
-func (c *SuperCommand) parseFormattingFlag() error {
-	// Check if they are already global registered
-	if c.flags.Lookup("format") != nil {
-		c.formattingType = c.flags.Lookup("format").Value.String()
-	} else if !c.flags.Parsed() {
-		c.flags.StringVar(&c.formattingType, "format", "", "")
-		err := c.flags.Parse(false, c.flags.Args())
-		if err != nil {
-			return errors.Trace(err)
-		}
+func (c *SuperCommand) handleFormattingDirective(ctx *Context) (error, bool) {
+	f := c.commonflags.Lookup("format")
+	if f == nil {
+		return nil, false
 	}
-	return nil
+	formatter := DefaultErrorFormatters[f.Value.String()]
+	if formatter == nil {
+		return nil, false
+	}
+	err := formatter(ctx.Stderr)
+	if err != nil {
+		return err, true
+	}
+	return ErrSilent, true
 }
 
 // FindClosestSubCommand attempts to find a sub command by a given name.
