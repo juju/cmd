@@ -518,8 +518,9 @@ func (c *SuperCommand) Run(ctx *Context) error {
 	if err != nil && !IsErrSilent(err) {
 		formatter := DefaultErrorFormatters[c.formattingType]
 		if formatter != nil {
-			_ = formatter(ctx.Stderr, err)
-			return nil
+			logger.Debugf("error stack: \n%v", errors.ErrorStack(err))
+			_ = formatter(ctx.Stderr)
+			return ErrSilent
 		}
 
 		WriteError(ctx.Stderr, err)
@@ -535,8 +536,15 @@ func (c *SuperCommand) Run(ctx *Context) error {
 }
 
 func (c *SuperCommand) parseFormattingFlag() {
-	c.flags.StringVar(&c.formattingType, "format", "", "")
-	_ = c.flags.Parse(true, c.flags.Args())
+
+	// Check if they are already global registered
+	if c.flags.Lookup("format") != nil {
+		c.formattingType = c.flags.Lookup("format").Value.String()
+	} else {
+		c.flags.StringVar(&c.formattingType, "format", "", "")
+		_ = c.flags.Parse(true, c.flags.Args())
+	}
+	//
 }
 
 // FindClosestSubCommand attempts to find a sub command by a given name.

@@ -664,6 +664,34 @@ func (s *SuperCommandSuite) TestSuperSetFlagsDefault(c *gc.C) {
 	s.assertFlagsAlias(c, sc, "flag")
 }
 
+func (s *SuperCommandSuite) TestErrInJson(c *gc.C) {
+	output := cmd.Output{}
+	sc := cmd.NewSuperCommand(cmd.SuperCommandParams{
+		UsagePrefix: "juju",
+		Name:        "command",
+		Log:         &cmd.Log{},
+		GlobalFlags: flagAdderFunc(func(fset *gnuflag.FlagSet) {
+			output.AddFlags(fset, "json", map[string]cmd.Formatter{"json": cmd.FormatJson})
+		}),
+	})
+	ctx := s.assertFormattingErr(c, sc, "json")
+	c.Check(cmdtesting.Stderr(ctx), gc.Equals, "{}")
+}
+
+func (s *SuperCommandSuite) TestErrInYaml(c *gc.C) {
+	output := cmd.Output{}
+	sc := cmd.NewSuperCommand(cmd.SuperCommandParams{
+		UsagePrefix: "juju",
+		Name:        "command",
+		Log:         &cmd.Log{},
+		GlobalFlags: flagAdderFunc(func(fset *gnuflag.FlagSet) {
+			output.AddFlags(fset, "yaml", map[string]cmd.Formatter{"yaml": cmd.FormatYaml})
+		}),
+	})
+	ctx := s.assertFormattingErr(c, sc, "yaml")
+	c.Check(cmdtesting.Stderr(ctx), gc.Equals, "{}\n")
+}
+
 func (s *SuperCommandSuite) assertFlagsAlias(c *gc.C, sc *cmd.SuperCommand, expectedAlias string) {
 	sc.Register(&TestCommand{Name: "blah"})
 	ctx := cmdtesting.Context(c)
@@ -674,6 +702,22 @@ func (s *SuperCommandSuite) assertFlagsAlias(c *gc.C, sc *cmd.SuperCommand, expe
 	c.Assert(code, gc.Equals, 2)
 	c.Check(cmdtesting.Stdout(ctx), gc.Equals, "")
 	c.Check(cmdtesting.Stderr(ctx), gc.Equals, fmt.Sprintf("ERROR %v provided but not defined: --fluffs\n", expectedAlias))
+}
+
+func (s *SuperCommandSuite) assertFormattingErr(c *gc.C, sc *cmd.SuperCommand, format string) *cmd.Context {
+	// This command will throw an error during the run
+	testCmd := &TestCommand{Name: "blah", Option: "error"}
+	sc.Register(testCmd)
+	ctx := cmdtesting.Context(c)
+	formatting := fmt.Sprintf("--format=%v", format)
+	code := cmd.Main(sc, ctx, []string{
+		"blah",
+		formatting,
+		"--option=error",
+	})
+	c.Assert(code, gc.Equals, 1)
+	c.Check(cmdtesting.Stdout(ctx), gc.Equals, "")
+	return ctx
 }
 
 type flagAdderFunc func(*gnuflag.FlagSet)

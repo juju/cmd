@@ -17,7 +17,7 @@ import (
 
 // Formatter writes the arbitrary object into the writer.
 type Formatter func(writer io.Writer, value interface{}) error
-type ErrFormatter func(writer io.Writer, err error) error
+type ErrFormatter func(writer io.Writer) error
 
 // FormatYaml writes out value as yaml to the writer, unless value is nil.
 func FormatYaml(writer io.Writer, value interface{}) error {
@@ -44,21 +44,12 @@ func FormatYaml(writer io.Writer, value interface{}) error {
 }
 
 // FormatYaml writes out value as yaml to the writer, unless value is nil.
-func FormatErrYaml(writer io.Writer, err error) error {
-	code := 1
-	if IsRcPassthroughError(err) {
-		code = err.(*RcPassthroughError).Code
-	}
-	result, err := goyaml.Marshal(ErrorResponse{ErrorMsg: err.Error(), ExitCode: code})
+func FormatErrYaml(writer io.Writer) error {
+	result, err := goyaml.Marshal(errResponse{})
 	if err != nil {
 		return err
 	}
-
-	if len(result) > 0 {
-		result = append(result, '\n')
-		_, err = writer.Write(result)
-		return err
-	}
+	_, err = writer.Write(result)
 	return nil
 }
 
@@ -73,24 +64,17 @@ func FormatJson(writer io.Writer, value interface{}) error {
 	return err
 }
 
-type ErrorResponse struct {
-	ErrorMsg string `yaml:"error-msg" json:"error-msg"`
-	ExitCode int    `yaml:"exit-code" json:"exit-code"`
-}
-
 // FormatJson writes out value as json.
-func FormatErrJson(writer io.Writer, err error) error {
-	code := 1
-	if IsRcPassthroughError(err) {
-		code = err.(*RcPassthroughError).Code
-	}
-	result, err := json.Marshal(ErrorResponse{ErrorMsg: err.Error(), ExitCode: code})
+func FormatErrJson(writer io.Writer) error {
+	result, err := json.Marshal(errResponse{})
 	if err != nil {
 		return err
 	}
-	result = append(result, '\n')
 	_, err = writer.Write(result)
 	return err
+}
+
+type errResponse struct {
 }
 
 // FormatSmart marshals value into a []byte according to the following rules:
