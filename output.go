@@ -11,6 +11,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/juju/errors"
 	"github.com/juju/gnuflag"
 	goyaml "gopkg.in/yaml.v2"
 )
@@ -45,12 +46,12 @@ func FormatYaml(writer io.Writer, value interface{}) error {
 
 // FormatYaml writes out value as yaml to the writer, unless value is nil.
 func FormatErrYaml(writer io.Writer) error {
-	result, err := goyaml.Marshal(errResponse{})
+	result, err := goyaml.Marshal(struct{}{})
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 	_, err = writer.Write(result)
-	return nil
+	return errors.Trace(err)
 }
 
 // FormatJson writes out value as json.
@@ -66,15 +67,12 @@ func FormatJson(writer io.Writer, value interface{}) error {
 
 // FormatJson writes out value as json.
 func FormatErrJson(writer io.Writer) error {
-	result, err := json.Marshal(errResponse{})
+	result, err := json.Marshal(struct{}{})
 	if err != nil {
-		return err
+		return errors.Trace(err)
 	}
 	_, err = writer.Write(result)
-	return err
-}
-
-type errResponse struct {
+	return errors.Trace(err)
 }
 
 // FormatSmart marshals value into a []byte according to the following rules:

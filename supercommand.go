@@ -482,8 +482,11 @@ func (c *SuperCommand) Init(args []string) error {
 		args = []string{c.action.name}
 		c.action = c.subcmds["help"]
 	}
-	c.parseFormattingFlag()
-	return c.action.command.Init(args)
+	err := c.action.command.Init(args)
+	if err != nil {
+		return err
+	}
+	return c.parseFormattingFlag()
 }
 
 // Run executes the subcommand that was selected in Init.
@@ -519,7 +522,10 @@ func (c *SuperCommand) Run(ctx *Context) error {
 		formatter := DefaultErrorFormatters[c.formattingType]
 		if formatter != nil {
 			logger.Debugf("error stack: \n%v", errors.ErrorStack(err))
-			_ = formatter(ctx.Stderr)
+			err = formatter(ctx.Stderr)
+			if err != nil {
+				return err
+			}
 			return ErrSilent
 		}
 
@@ -535,16 +541,18 @@ func (c *SuperCommand) Run(ctx *Context) error {
 	return err
 }
 
-func (c *SuperCommand) parseFormattingFlag() {
-
+func (c *SuperCommand) parseFormattingFlag() error {
 	// Check if they are already global registered
 	if c.flags.Lookup("format") != nil {
 		c.formattingType = c.flags.Lookup("format").Value.String()
-	} else {
+	} else if !c.flags.Parsed() {
 		c.flags.StringVar(&c.formattingType, "format", "", "")
-		_ = c.flags.Parse(true, c.flags.Args())
+		err := c.flags.Parse(false, c.flags.Args())
+		if err != nil {
+			return errors.Trace(err)
+		}
 	}
-	//
+	return nil
 }
 
 // FindClosestSubCommand attempts to find a sub command by a given name.
