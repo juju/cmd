@@ -129,7 +129,7 @@ var outputTests = map[string][]struct {
 		{[]string{"blam", "dink"}, "- blam\n- dink\n"},
 		{defaultValue, "juju: 1\npuppet: false\n"},
 		{overrideFormatter{cmd.FormatSmart, "abc\ndef"}, "abc\ndef\n"},
-		{overrideErrFormatter{cmd.FormatErrYaml,}, "{}\n"},
+		{overrideErrFormatter{cmd.FormatErrYaml}, "{}\n"},
 	},
 }
 
@@ -147,6 +147,29 @@ func (s *CmdSuite) TestOutputFormat(c *gc.C) {
 			c.Check(result, gc.Equals, 0)
 			c.Check(bufferString(ctx.Stdout), gc.Equals, t.output)
 			c.Check(bufferString(ctx.Stderr), gc.Equals, "")
+		}
+	}
+}
+
+func (s *CmdSuite) TestOutputFormatType(c *gc.C) {
+	for format, tests := range outputTests {
+		c.Logf("format %s", format)
+		var args []string
+		if format != "" {
+			args = []string{"--format", format}
+		}
+		for i, t := range tests {
+			c.Logf("  test %d", i)
+			ctx := cmdtesting.Context(c)
+			output := &OutputCommand{value: t.value}
+			_ = cmd.Main(output, ctx, args)
+
+			switch format {
+			case "json", "yaml":
+				c.Check(output.out.Type(), gc.Equals, cmd.MachineType)
+			default:
+				c.Check(output.out.Type(), gc.Equals, cmd.HumanReadableType)
+			}
 		}
 	}
 }

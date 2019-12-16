@@ -229,6 +229,39 @@ func (c *Output) writeFormatter(ctx *Context, formatter Formatter, value interfa
 	return nil
 }
 
+// Name represents the output of the current output formatting directive.
 func (c *Output) Name() string {
 	return c.formatter.name
+}
+
+// OutputType is used to describe what type of output the user can expect the
+// output format to be in.
+// In the future we can use this to know if to present stdout/stderr to an
+// operator if they request a machine type.
+type OutputType string
+
+const (
+	// MachineType represents an output that is intended to be consumed by a
+	// machine (script or automation). When a machine type is then used, things
+	// like interactivity should be disabled completely and instead default
+	// values should be returned.
+	MachineType OutputType = "machine"
+
+	// HumanReadableType represents output types where the user can interact
+	// with the tty session, so rich feedback is desired to help them through
+	// command line tasks.
+	HumanReadableType OutputType = "human-readable"
+)
+
+// Type represents the type of output of the current output formatting
+// directive.
+// For example, is the output a machine output (json, yaml) or is it designed to
+// be human readable (tabular).
+func (c *Output) Type() OutputType {
+	switch c.Name() {
+	case "json", "yaml":
+		return MachineType
+	default:
+		return HumanReadableType
+	}
 }
