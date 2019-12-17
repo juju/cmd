@@ -115,6 +115,7 @@ type Context struct {
 	Stderr  io.Writer
 	quiet   bool
 	verbose bool
+	machine bool
 }
 
 // Quiet reports whether the command is in "quiet" mode. When
@@ -122,6 +123,13 @@ type Context struct {
 // messages can be used instead).
 func (ctx *Context) Quiet() bool {
 	return ctx.quiet
+}
+
+// Machine reports whether the command is required to output to a "machine".
+// This mode is intended to stop the proliferation of execessive writes to
+// stdout and stderr, when the output is intended for machines.
+func (ctx *Context) Machine() bool {
+	return ctx.machine
 }
 
 func (ctx *Context) write(format string, params ...interface{}) {

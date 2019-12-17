@@ -664,34 +664,6 @@ func (s *SuperCommandSuite) TestSuperSetFlagsDefault(c *gc.C) {
 	s.assertFlagsAlias(c, sc, "flag")
 }
 
-func (s *SuperCommandSuite) TestErrInJson(c *gc.C) {
-	output := cmd.Output{}
-	sc := cmd.NewSuperCommand(cmd.SuperCommandParams{
-		UsagePrefix: "juju",
-		Name:        "command",
-		Log:         &cmd.Log{},
-		GlobalFlags: flagAdderFunc(func(fset *gnuflag.FlagSet) {
-			output.AddFlags(fset, "json", map[string]cmd.Formatter{"json": cmd.FormatJson})
-		}),
-	})
-	ctx := s.assertFormattingErr(c, sc, "json")
-	c.Check(cmdtesting.Stderr(ctx), gc.Equals, "{}")
-}
-
-func (s *SuperCommandSuite) TestErrInYaml(c *gc.C) {
-	output := cmd.Output{}
-	sc := cmd.NewSuperCommand(cmd.SuperCommandParams{
-		UsagePrefix: "juju",
-		Name:        "command",
-		Log:         &cmd.Log{},
-		GlobalFlags: flagAdderFunc(func(fset *gnuflag.FlagSet) {
-			output.AddFlags(fset, "yaml", map[string]cmd.Formatter{"yaml": cmd.FormatYaml})
-		}),
-	})
-	ctx := s.assertFormattingErr(c, sc, "yaml")
-	c.Check(cmdtesting.Stderr(ctx), gc.Equals, "{}\n")
-}
-
 func (s *SuperCommandSuite) assertFlagsAlias(c *gc.C, sc *cmd.SuperCommand, expectedAlias string) {
 	sc.Register(&TestCommand{Name: "blah"})
 	ctx := cmdtesting.Context(c)
@@ -704,7 +676,33 @@ func (s *SuperCommandSuite) assertFlagsAlias(c *gc.C, sc *cmd.SuperCommand, expe
 	c.Check(cmdtesting.Stderr(ctx), gc.Equals, fmt.Sprintf("ERROR %v provided but not defined: --fluffs\n", expectedAlias))
 }
 
-func (s *SuperCommandSuite) assertFormattingErr(c *gc.C, sc *cmd.SuperCommand, format string) *cmd.Context {
+func (s *SuperCommandSuite) TestErrInJson(c *gc.C) {
+	output := cmd.Output{}
+	sc := cmd.NewSuperCommand(cmd.SuperCommandParams{
+		UsagePrefix: "juju",
+		Name:        "command",
+		Log:         &cmd.Log{},
+		GlobalFlags: flagAdderFunc(func(fset *gnuflag.FlagSet) {
+			output.AddFlags(fset, "json", map[string]cmd.Formatter{"json": cmd.FormatJson})
+		}),
+	})
+	s.assertFormattingErr(c, sc, "json")
+}
+
+func (s *SuperCommandSuite) TestErrInYaml(c *gc.C) {
+	output := cmd.Output{}
+	sc := cmd.NewSuperCommand(cmd.SuperCommandParams{
+		UsagePrefix: "juju",
+		Name:        "command",
+		Log:         &cmd.Log{},
+		GlobalFlags: flagAdderFunc(func(fset *gnuflag.FlagSet) {
+			output.AddFlags(fset, "yaml", map[string]cmd.Formatter{"yaml": cmd.FormatYaml})
+		}),
+	})
+	s.assertFormattingErr(c, sc, "yaml")
+}
+
+func (s *SuperCommandSuite) assertFormattingErr(c *gc.C, sc *cmd.SuperCommand, format string) {
 	// This command will throw an error during the run
 	testCmd := &TestCommand{Name: "blah", Option: "error"}
 	sc.Register(testCmd)
@@ -716,8 +714,9 @@ func (s *SuperCommandSuite) assertFormattingErr(c *gc.C, sc *cmd.SuperCommand, f
 		"--option=error",
 	})
 	c.Assert(code, gc.Equals, 1)
+	c.Check(ctx.Machine(), gc.Equals, true)
 	c.Check(cmdtesting.Stdout(ctx), gc.Equals, "")
-	return ctx
+	c.Check(cmdtesting.Stderr(ctx), gc.Equals, "{}\n")
 }
 
 type flagAdderFunc func(*gnuflag.FlagSet)
