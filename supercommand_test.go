@@ -672,6 +672,7 @@ func (s *SuperCommandSuite) assertFlagsAlias(c *gc.C, sc *cmd.SuperCommand, expe
 		"--fluffs",
 	})
 	c.Assert(code, gc.Equals, 2)
+	c.Check(ctx.IsSerial(), gc.Equals, false)
 	c.Check(cmdtesting.Stdout(ctx), gc.Equals, "")
 	c.Check(cmdtesting.Stderr(ctx), gc.Equals, fmt.Sprintf("ERROR %v provided but not defined: --fluffs\n", expectedAlias))
 }
@@ -714,7 +715,7 @@ func (s *SuperCommandSuite) assertFormattingErr(c *gc.C, sc *cmd.SuperCommand, f
 		"--option=error",
 	})
 	c.Assert(code, gc.Equals, 1)
-	c.Check(ctx.Machine(), gc.Equals, true)
+	c.Check(ctx.IsSerial(), gc.Equals, true)
 	c.Check(cmdtesting.Stdout(ctx), gc.Equals, "")
 	c.Check(cmdtesting.Stderr(ctx), gc.Equals, "{}\n")
 }

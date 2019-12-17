@@ -28,7 +28,11 @@ func (c *OutputCommand) Info() *cmd.Info {
 }
 
 func (c *OutputCommand) SetFlags(f *gnuflag.FlagSet) {
-	c.out.AddFlags(f, "smart", cmd.DefaultFormatters)
+	formatters := make(map[string]cmd.Formatter, len(cmd.DefaultFormatters))
+	for k, v := range cmd.DefaultFormatters {
+		formatters[k] = v.Formatter
+	}
+	c.out.AddFlags(f, "smart", formatters)
 }
 
 func (c *OutputCommand) Init(args []string) error {

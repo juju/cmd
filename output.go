@@ -85,12 +85,19 @@ func FormatSmart(writer io.Writer, value interface{}) error {
 	return err
 }
 
+// TypeFormatter describes a formatting type that can define if a type is
+// serialisable.
+type TypeFormatter struct {
+	Formatter    Formatter
+	Serialisable bool
+}
+
 // DefaultFormatters holds the formatters that can be
 // specified with the --format flag.
-var DefaultFormatters = map[string]Formatter{
-	"smart": FormatSmart,
-	"yaml":  FormatYaml,
-	"json":  FormatJson,
+var DefaultFormatters = map[string]TypeFormatter{
+	"smart": TypeFormatter{Formatter: FormatSmart, Serialisable: false},
+	"yaml":  TypeFormatter{Formatter: FormatYaml, Serialisable: true},
+	"json":  TypeFormatter{Formatter: FormatJson, Serialisable: true},
 }
 
 // formatterValue implements gnuflag.Value for the --format flag.

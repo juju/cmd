@@ -498,10 +498,10 @@ func (c *SuperCommand) Run(ctx *Context) error {
 		panic("Run: missing subcommand; Init failed or not called")
 	}
 
-	// Set the machine state on the context, by checking the common global
+	// Set the serialisable state on the context, by checking the common global
 	// formatting directive. Set this early enough, so that everyone can take
 	// appropriate action further down stream.
-	ctx.machine = c.isMachineFormatDirective()
+	ctx.serialisable = c.isSerialisableFormatDirective()
 
 	if c.Log != nil {
 		if err := c.Log.Start(ctx); err != nil {
@@ -546,26 +546,21 @@ func (c *SuperCommand) Run(ctx *Context) error {
 	return err
 }
 
-// isMachineFormatDirective checks to see if the output format for a given
+// isSerialisableFormatDirective checks to see if the output format for a given
 // super command common flag (global), is intended to be used by a machine or
 // not.
 // It is expected that when this is set to true, extra actions are performed on
 // the output to mitigate addition verbose logging or interactivity.
-func (c *SuperCommand) isMachineFormatDirective() bool {
+func (c *SuperCommand) isSerialisableFormatDirective() bool {
 	formatFlag := c.commonflags.Lookup("format")
 	if formatFlag == nil {
 		return false
 	}
 	formatName := formatFlag.Value.String()
-	if _, ok := DefaultFormatters[formatName]; !ok {
-		return false
+	if typeFormatter, ok := DefaultFormatters[formatName]; ok {
+		return typeFormatter.Serialisable
 	}
-	switch formatName {
-	case "json", "yaml":
-		return true
-	default:
-		return false
-	}
+	return false
 }
 
 // handleErrorForMachineFormats attempts to handle fatal errors when using
@@ -577,7 +572,7 @@ func (c *SuperCommand) isMachineFormatDirective() bool {
 // successful format lookup is done, otherwise return errors from a unsuccessful
 // lookup.
 func (c *SuperCommand) handleErrorForMachineFormats(ctx *Context) error {
-	if !ctx.machine {
+	if !ctx.IsSerial() {
 		return nil
 	}
 
@@ -586,11 +581,11 @@ func (c *SuperCommand) handleErrorForMachineFormats(ctx *Context) error {
 		return nil
 	}
 	formatName := formatFlag.Value.String()
-	formatter, ok := DefaultFormatters[formatName]
+	typeFormatter, ok := DefaultFormatters[formatName]
 	if !ok {
 		return errors.Errorf("missing formatter %q", formatName)
 	}
-	err := formatter(ctx.Stderr, struct{}{})
+	err := typeFormatter.Formatter(ctx.Stderr, struct{}{})
 	if err != nil {
 		return err
 	}
