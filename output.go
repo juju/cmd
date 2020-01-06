@@ -11,14 +11,12 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/juju/errors"
 	"github.com/juju/gnuflag"
 	goyaml "gopkg.in/yaml.v2"
 )
 
 // Formatter writes the arbitrary object into the writer.
 type Formatter func(writer io.Writer, value interface{}) error
-type ErrFormatter func(writer io.Writer) error
 
 // FormatYaml writes out value as yaml to the writer, unless value is nil.
 func FormatYaml(writer io.Writer, value interface{}) error {
@@ -44,16 +42,6 @@ func FormatYaml(writer io.Writer, value interface{}) error {
 	return nil
 }
 
-// FormatYaml writes out value as yaml to the writer, unless value is nil.
-func FormatErrYaml(writer io.Writer) error {
-	result, err := goyaml.Marshal(struct{}{})
-	if err != nil {
-		return errors.Trace(err)
-	}
-	_, err = writer.Write(result)
-	return errors.Trace(err)
-}
-
 // FormatJson writes out value as json.
 func FormatJson(writer io.Writer, value interface{}) error {
 	result, err := json.Marshal(value)
@@ -63,16 +51,6 @@ func FormatJson(writer io.Writer, value interface{}) error {
 	result = append(result, '\n')
 	_, err = writer.Write(result)
 	return err
-}
-
-// FormatJson writes out value as json.
-func FormatErrJson(writer io.Writer) error {
-	result, err := json.Marshal(struct{}{})
-	if err != nil {
-		return errors.Trace(err)
-	}
-	_, err = writer.Write(result)
-	return errors.Trace(err)
 }
 
 // FormatSmart marshals value into a []byte according to the following rules:
@@ -107,19 +85,19 @@ func FormatSmart(writer io.Writer, value interface{}) error {
 	return err
 }
 
-// DefaultFormatters holds the formatters that can be
-// specified with the --format flag.
-var DefaultFormatters = map[string]Formatter{
-	"smart": FormatSmart,
-	"yaml":  FormatYaml,
-	"json":  FormatJson,
+// TypeFormatter describes a formatting type that can define if a type is
+// serialisable.
+type TypeFormatter struct {
+	Formatter    Formatter
+	Serialisable bool
 }
 
-// DefaultErrorFormatters holds the formatters that can be
+// DefaultFormatters holds the formatters that can be
 // specified with the --format flag.
-var DefaultErrorFormatters = map[string]ErrFormatter{
-	"yaml": FormatErrYaml,
-	"json": FormatErrJson,
+var DefaultFormatters = map[string]TypeFormatter{
+	"smart": TypeFormatter{Formatter: FormatSmart, Serialisable: false},
+	"yaml":  TypeFormatter{Formatter: FormatYaml, Serialisable: true},
+	"json":  TypeFormatter{Formatter: FormatJson, Serialisable: true},
 }
 
 // formatterValue implements gnuflag.Value for the --format flag.
@@ -229,6 +207,7 @@ func (c *Output) writeFormatter(ctx *Context, formatter Formatter, value interfa
 	return nil
 }
 
+// Name returns the underlying name of the formatter.
 func (c *Output) Name() string {
 	return c.formatter.name
 }

@@ -497,11 +497,18 @@ func (c *SuperCommand) Run(ctx *Context) error {
 	if c.action.command == nil {
 		panic("Run: missing subcommand; Init failed or not called")
 	}
+
+	// Set the serialisable state on the context, by checking the common global
+	// formatting directive. Set this early enough, so that everyone can take
+	// appropriate action further down stream.
+	ctx.serialisable = c.isSerialisableFormatDirective()
+
 	if c.Log != nil {
 		if err := c.Log.Start(ctx); err != nil {
 			return err
 		}
 	}
+
 	if c.notifyRun != nil {
 		name := c.Name
 		if c.usagePrefix != "" && c.usagePrefix != name {
@@ -512,16 +519,20 @@ func (c *SuperCommand) Run(ctx *Context) error {
 	if deprecated, replacement := c.action.Deprecated(); deprecated {
 		ctx.Infof("WARNING: %q is deprecated, please use %q", c.action.name, replacement)
 	}
+
 	err := c.action.command.Run(ctx)
 	if err != nil && !IsErrSilent(err) {
-		handleErr, done := c.handleFormattingDirective(ctx)
+		// Handle formatting when displaying errors.
+		handleErr := c.handleErrorForMachineFormats(ctx)
 		if handleErr != nil {
+			// If the error isn't a silent error, then dump out the error stack,
+			// which can be useful when debugging.
+			if handleErr != ErrSilent {
+				logger.Debugf("error stack: \n%v", errors.ErrorStack(err))
+			}
 			return handleErr
 		}
-		if done {
-			logger.Debugf("error stack: \n%v", errors.ErrorStack(err))
-			return nil
-		}
+
 		WriteError(ctx.Stderr, err)
 		logger.Debugf("error stack: \n%v", errors.ErrorStack(err))
 
@@ -535,20 +546,50 @@ func (c *SuperCommand) Run(ctx *Context) error {
 	return err
 }
 
-func (c *SuperCommand) handleFormattingDirective(ctx *Context) (error, bool) {
-	f := c.commonflags.Lookup("format")
-	if f == nil {
-		return nil, false
+// isSerialisableFormatDirective checks to see if the output format for a given
+// super command common flag (global), is intended to be used by a machine or
+// not.
+// It is expected that when this is set to true, extra actions are performed on
+// the output to mitigate addition verbose logging or interactivity.
+func (c *SuperCommand) isSerialisableFormatDirective() bool {
+	formatFlag := c.commonflags.Lookup("format")
+	if formatFlag == nil {
+		return false
 	}
-	formatter := DefaultErrorFormatters[f.Value.String()]
-	if formatter == nil {
-		return nil, false
+	formatName := formatFlag.Value.String()
+	if typeFormatter, ok := DefaultFormatters[formatName]; ok {
+		return typeFormatter.Serialisable
 	}
-	err := formatter(ctx.Stderr)
+	return false
+}
+
+// handleErrorForMachineFormats attempts to handle fatal errors when using
+// formatting directives.
+// If the formatting directive is what we consider a machine format (yaml or
+// json), then we attempt to output nothing for that format. An example of this
+// would be; for json, that would be {}.
+// No additional writes to stdout or stderr should be performed when a
+// successful format lookup is done, otherwise return errors from a unsuccessful
+// lookup.
+func (c *SuperCommand) handleErrorForMachineFormats(ctx *Context) error {
+	if !ctx.IsSerial() {
+		return nil
+	}
+
+	formatFlag := c.commonflags.Lookup("format")
+	if formatFlag == nil {
+		return nil
+	}
+	formatName := formatFlag.Value.String()
+	typeFormatter, ok := DefaultFormatters[formatName]
+	if !ok {
+		return errors.Errorf("missing formatter %q", formatName)
+	}
+	err := typeFormatter.Formatter(ctx.Stderr, struct{}{})
 	if err != nil {
-		return err, true
+		return err
 	}
-	return ErrSilent, true
+	return ErrSilent
 }
 
 // FindClosestSubCommand attempts to find a sub command by a given name.

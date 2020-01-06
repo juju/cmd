@@ -108,13 +108,14 @@ func (c *CommandBase) AllowInterspersedFlags() bool {
 // should interpret file names relative to Dir (see AbsPath below), and print
 // output and errors to Stdout and Stderr respectively.
 type Context struct {
-	Dir     string
-	Env     map[string]string
-	Stdin   io.Reader
-	Stdout  io.Writer
-	Stderr  io.Writer
-	quiet   bool
-	verbose bool
+	Dir          string
+	Env          map[string]string
+	Stdin        io.Reader
+	Stdout       io.Writer
+	Stderr       io.Writer
+	quiet        bool
+	verbose      bool
+	serialisable bool
 }
 
 // Quiet reports whether the command is in "quiet" mode. When
@@ -122,6 +123,13 @@ type Context struct {
 // messages can be used instead).
 func (ctx *Context) Quiet() bool {
 	return ctx.quiet
+}
+
+// IsSerial reports whether the command is required to output to a "machine".
+// This mode is intended to stop the proliferation of execessive writes to
+// stdout and stderr, when the output is intended for machines.
+func (ctx *Context) IsSerial() bool {
+	return ctx.serialisable
 }
 
 func (ctx *Context) write(format string, params ...interface{}) {

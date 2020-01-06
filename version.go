@@ -32,7 +32,11 @@ func (v *versionCommand) Info() *Info {
 }
 
 func (v *versionCommand) SetFlags(f *gnuflag.FlagSet) {
-	v.out.AddFlags(f, "smart", DefaultFormatters)
+	formatters := make(map[string]Formatter, len(DefaultFormatters))
+	for k, v := range DefaultFormatters {
+		formatters[k] = v.Formatter
+	}
+	v.out.AddFlags(f, "smart", formatters)
 	f.BoolVar(&v.showAll, "all", false, "Prints all version information")
 }
 

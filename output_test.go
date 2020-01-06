@@ -28,7 +28,11 @@ func (c *OutputCommand) Info() *cmd.Info {
 }
 
 func (c *OutputCommand) SetFlags(f *gnuflag.FlagSet) {
-	c.out.AddFlags(f, "smart", cmd.DefaultFormatters)
+	formatters := make(map[string]cmd.Formatter, len(cmd.DefaultFormatters))
+	for k, v := range cmd.DefaultFormatters {
+		formatters[k] = v.Formatter
+	}
+	c.out.AddFlags(f, "smart", formatters)
 }
 
 func (c *OutputCommand) Init(args []string) error {
@@ -45,10 +49,6 @@ func (c *OutputCommand) Run(ctx *cmd.Context) error {
 type overrideFormatter struct {
 	formatter cmd.Formatter
 	value     interface{}
-}
-
-type overrideErrFormatter struct {
-	formatter cmd.ErrFormatter
 }
 
 // use a struct to control field ordering.
@@ -111,7 +111,7 @@ var outputTests = map[string][]struct {
 		{[]string{"blam", "dink"}, `["blam","dink"]` + "\n"},
 		{defaultValue, `{"Juju":1,"Puppet":false}` + "\n"},
 		{overrideFormatter{cmd.FormatSmart, "abc\ndef"}, "abc\ndef\n"},
-		{overrideErrFormatter{cmd.FormatErrJson}, "{}\n"},
+		{overrideFormatter{cmd.FormatJson, struct{}{}}, "{}\n"},
 	},
 	"yaml": {
 		{nil, ""},
@@ -129,7 +129,7 @@ var outputTests = map[string][]struct {
 		{[]string{"blam", "dink"}, "- blam\n- dink\n"},
 		{defaultValue, "juju: 1\npuppet: false\n"},
 		{overrideFormatter{cmd.FormatSmart, "abc\ndef"}, "abc\ndef\n"},
-		{overrideErrFormatter{cmd.FormatErrYaml,}, "{}\n"},
+		{overrideFormatter{cmd.FormatYaml, struct{}{}}, "{}\n"},
 	},
 }
 
