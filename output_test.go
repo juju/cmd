@@ -169,3 +169,14 @@ func (s *CmdSuite) TestFormatAlternativeSyntax(c *gc.C) {
 	c.Assert(result, gc.Equals, 0)
 	c.Assert(bufferString(ctx.Stdout), gc.Equals, "null\n")
 }
+
+func (s *CmdSuite) TestFormatters(c *gc.C) {
+	typeFormatters := cmd.DefaultFormatters
+	formatters := typeFormatters.Formatters()
+
+	c.Assert(len(typeFormatters), gc.Equals, len(formatters))
+	for k := range typeFormatters {
+		_, ok := formatters[k]
+		c.Assert(ok, gc.Equals, true)
+	}
+}
