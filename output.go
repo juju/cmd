@@ -92,9 +92,21 @@ type TypeFormatter struct {
 	Serialisable bool
 }
 
+type formatters map[string]TypeFormatter
+
+// Formatters returns the underlying formatters without the additional
+// information of a TypeFormatter.
+func (f formatters) Formatters() map[string]Formatter {
+	result := make(map[string]Formatter, len(f))
+	for k, v := range f {
+		result[k] = v.Formatter
+	}
+	return result
+}
+
 // DefaultFormatters holds the formatters that can be
 // specified with the --format flag.
-var DefaultFormatters = map[string]TypeFormatter{
+var DefaultFormatters = formatters{
 	"smart": TypeFormatter{Formatter: FormatSmart, Serialisable: false},
 	"yaml":  TypeFormatter{Formatter: FormatYaml, Serialisable: true},
 	"json":  TypeFormatter{Formatter: FormatJson, Serialisable: true},
