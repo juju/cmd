@@ -585,7 +585,12 @@ func (c *SuperCommand) handleErrorForMachineFormats(ctx *Context) error {
 	if !ok {
 		return errors.Errorf("missing formatter %q", formatName)
 	}
-	err := typeFormatter.Formatter(ctx.Stderr, struct{}{})
+	// Although this code handles errors for machine formats, the actual empty
+	// type should be written to stdout. This allows consumers of the output to
+	// correctly handle the resulting empty value.
+	// If we place it into stderr, it means that you can never add any more
+	// additional information to stderr, even if it helps the user.
+	err := typeFormatter.Formatter(ctx.Stdout, struct{}{})
 	if err != nil {
 		return err
 	}
