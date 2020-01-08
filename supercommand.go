@@ -525,8 +525,10 @@ func (c *SuperCommand) Run(ctx *Context) error {
 		// Handle formatting when displaying errors.
 		handleErr := c.handleErrorForMachineFormats(ctx)
 		if handleErr != nil {
-			// If the error isn't a silent error, then dump out the error stack,
-			// which can be useful when debugging.
+			// If there is a handle error when attempting to find the machine
+			// format, we should let the user know. In doing so, we dump the
+			// original error and return the handle error so that effective
+			// debugging is possible.
 			logger.Debugf("error stack: \n%v", errors.ErrorStack(err))
 			return handleErr
 		}
