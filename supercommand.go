@@ -524,7 +524,7 @@ func (c *SuperCommand) Run(ctx *Context) error {
 	if err != nil && !IsErrSilent(err) {
 		// Handle formatting when displaying errors.
 		handleErr := c.handleErrorForMachineFormats(ctx)
-		if handleErr != nil && handleErr != ErrSilent {
+		if handleErr != nil {
 			// If the error isn't a silent error, then dump out the error stack,
 			// which can be useful when debugging.
 			logger.Debugf("error stack: \n%v", errors.ErrorStack(err))
@@ -588,11 +588,7 @@ func (c *SuperCommand) handleErrorForMachineFormats(ctx *Context) error {
 	// correctly handle the resulting empty value.
 	// If we place it into stderr, it means that you can never add any more
 	// additional information to stderr, even if it helps the user.
-	err := typeFormatter.Formatter(ctx.Stdout, struct{}{})
-	if err != nil {
-		return err
-	}
-	return ErrSilent
+	return typeFormatter.Formatter(ctx.Stdout, struct{}{})
 }
 
 // FindClosestSubCommand attempts to find a sub command by a given name.
