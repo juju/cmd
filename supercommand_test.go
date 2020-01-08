@@ -716,7 +716,7 @@ func (s *SuperCommandSuite) assertFormattingErr(c *gc.C, sc *cmd.SuperCommand, f
 	})
 	c.Assert(code, gc.Equals, 1)
 	c.Check(ctx.IsSerial(), gc.Equals, true)
-	c.Check(cmdtesting.Stderr(ctx), gc.Equals, "")
+	c.Check(cmdtesting.Stderr(ctx), gc.Matches, "ERROR BAM!\n")
 	c.Check(cmdtesting.Stdout(ctx), gc.Equals, "{}\n")
 }
 
