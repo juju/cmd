@@ -524,12 +524,10 @@ func (c *SuperCommand) Run(ctx *Context) error {
 	if err != nil && !IsErrSilent(err) {
 		// Handle formatting when displaying errors.
 		handleErr := c.handleErrorForMachineFormats(ctx)
-		if handleErr != nil {
+		if handleErr != nil && handleErr != ErrSilent {
 			// If the error isn't a silent error, then dump out the error stack,
 			// which can be useful when debugging.
-			if handleErr != ErrSilent {
-				logger.Debugf("error stack: \n%v", errors.ErrorStack(err))
-			}
+			logger.Debugf("error stack: \n%v", errors.ErrorStack(err))
 			return handleErr
 		}
 
