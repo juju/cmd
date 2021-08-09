@@ -7,8 +7,8 @@ import (
 	"github.com/juju/gnuflag"
 	gc "gopkg.in/check.v1"
 
-	"github.com/juju/cmd"
-	"github.com/juju/cmd/cmdtesting"
+	"github.com/juju/cmd/v3"
+	"github.com/juju/cmd/v3/cmdtesting"
 )
 
 // OutputCommand is a command that uses the output.go formatters.

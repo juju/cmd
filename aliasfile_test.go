@@ -11,7 +11,7 @@ import (
 	"github.com/juju/testing"
 	gc "gopkg.in/check.v1"
 
-	"github.com/juju/cmd"
+	"github.com/juju/cmd/v3"
 )
 
 type ParseAliasFileSuite struct {

@@ -14,7 +14,7 @@ import (
 	jc "github.com/juju/testing/checkers"
 	gc "gopkg.in/check.v1"
 
-	"github.com/juju/cmd/cmdtesting"
+	"github.com/juju/cmd/v3/cmdtesting"
 )
 
 type prompterSuite struct {

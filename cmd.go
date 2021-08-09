@@ -17,7 +17,7 @@ import (
 	"github.com/juju/ansiterm"
 	"github.com/juju/gnuflag"
 	"github.com/juju/loggo"
-	"github.com/juju/utils"
+	"github.com/juju/utils/v2"
 )
 
 // RcPassthroughError indicates that a Juju plugin command exited with a
@@ -108,14 +108,15 @@ func (c *CommandBase) AllowInterspersedFlags() bool {
 // should interpret file names relative to Dir (see AbsPath below), and print
 // output and errors to Stdout and Stderr respectively.
 type Context struct {
-	Dir          string
-	Env          map[string]string
-	Stdin        io.Reader
-	Stdout       io.Writer
-	Stderr       io.Writer
-	quiet        bool
-	verbose      bool
-	serialisable bool
+	Dir              string
+	Env              map[string]string
+	Stdin            io.Reader
+	Stdout           io.Writer
+	Stderr           io.Writer
+	outputFormatUsed bool
+	quiet            bool
+	verbose          bool
+	serialisable     bool
 }
 
 // Quiet reports whether the command is in "quiet" mode. When

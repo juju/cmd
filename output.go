@@ -216,6 +216,8 @@ func (c *Output) writeFormatter(ctx *Context, formatter Formatter, value interfa
 	if newline {
 		fmt.Fprintln(target)
 	}
+	// Suppress the handling of errors on stdout when a machine formatter is used.
+	ctx.outputFormatUsed = true
 	return nil
 }
 
