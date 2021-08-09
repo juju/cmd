@@ -11,7 +11,7 @@ import (
 
 	"github.com/juju/gnuflag"
 
-	"github.com/juju/cmd"
+	"github.com/juju/cmd/v3"
 )
 
 func bufferString(stream io.Writer) string {
@@ -21,11 +21,12 @@ func bufferString(stream io.Writer) string {
 // TestCommand is used by several different tests.
 type TestCommand struct {
 	cmd.CommandBase
-	Name    string
-	Option  string
-	Minimal bool
-	Aliases []string
-	FlagAKA string
+	Name      string
+	Option    string
+	Minimal   bool
+	Aliases   []string
+	FlagAKA   string
+	CustomRun func(*cmd.Context) error
 }
 
 func (c *TestCommand) Info() *cmd.Info {
@@ -56,6 +57,9 @@ func (c *TestCommand) Init(args []string) error {
 }
 
 func (c *TestCommand) Run(ctx *cmd.Context) error {
+	if c.CustomRun != nil {
+		return c.CustomRun(ctx)
+	}
 	switch c.Option {
 	case "error":
 		return errors.New("BAM!")

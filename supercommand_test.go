@@ -5,6 +5,7 @@ package cmd_test
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"path/filepath"
@@ -14,8 +15,8 @@ import (
 	gitjujutesting "github.com/juju/testing"
 	gc "gopkg.in/check.v1"
 
-	"github.com/juju/cmd"
-	"github.com/juju/cmd/cmdtesting"
+	"github.com/juju/cmd/v3"
+	"github.com/juju/cmd/v3/cmdtesting"
 )
 
 func initDefenestrate(args []string) (*cmd.SuperCommand, *TestCommand, error) {
@@ -701,6 +702,40 @@ func (s *SuperCommandSuite) TestErrInYaml(c *gc.C) {
 		}),
 	})
 	s.assertFormattingErr(c, sc, "yaml")
+}
+
+func (s *SuperCommandSuite) TestErrInJsonWithOutput(c *gc.C) {
+	output := cmd.Output{}
+	sc := cmd.NewSuperCommand(cmd.SuperCommandParams{
+		UsagePrefix: "juju",
+		Name:        "command",
+		Log:         &cmd.Log{},
+		GlobalFlags: flagAdderFunc(func(fset *gnuflag.FlagSet) {
+			output.AddFlags(fset, "json", map[string]cmd.Formatter{"json": cmd.FormatJson})
+		}),
+	})
+	// This command will throw an error during the run after logging a structured output.
+	testCmd := &TestCommand{
+		Name:   "blah",
+		Option: "error",
+		CustomRun: func(ctx *cmd.Context) error {
+			output.Write(ctx, struct {
+				Name string `json:"name"`
+			}{Name: "test"})
+			return errors.New("BAM!")
+		},
+	}
+	sc.Register(testCmd)
+	ctx := cmdtesting.Context(c)
+	code := cmd.Main(sc, ctx, []string{
+		"blah",
+		"--format=json",
+		"--option=error",
+	})
+	c.Assert(code, gc.Equals, 1)
+	c.Check(ctx.IsSerial(), gc.Equals, true)
+	c.Check(cmdtesting.Stderr(ctx), gc.Matches, "ERROR BAM!\n")
+	c.Check(cmdtesting.Stdout(ctx), gc.Equals, "{\"name\":\"test\"}\n")
 }
 
 func (s *SuperCommandSuite) assertFormattingErr(c *gc.C, sc *cmd.SuperCommand, format string) {

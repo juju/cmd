@@ -9,7 +9,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/juju/utils"
+	"github.com/juju/utils/v2"
 )
 
 // FileVar represents a path to a file.

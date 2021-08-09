@@ -572,7 +572,9 @@ func (c *SuperCommand) isSerialisableFormatDirective() bool {
 // successful format lookup is done, otherwise return errors from a unsuccessful
 // lookup.
 func (c *SuperCommand) handleErrorForMachineFormats(ctx *Context) error {
-	if !ctx.IsSerial() {
+	// If an output format was used on stdout already we can omit correction
+	// of the machine output.
+	if !ctx.IsSerial() || ctx.outputFormatUsed {
 		return nil
 	}
 
