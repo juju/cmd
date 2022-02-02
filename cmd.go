@@ -17,7 +17,7 @@ import (
 	"github.com/juju/ansiterm"
 	"github.com/juju/gnuflag"
 	"github.com/juju/loggo"
-	"github.com/juju/utils/v2"
+	"github.com/juju/utils/v3"
 )
 
 // RcPassthroughError indicates that a Juju plugin command exited with a
