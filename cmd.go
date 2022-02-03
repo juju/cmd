@@ -5,6 +5,7 @@ package cmd
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -108,6 +109,7 @@ func (c *CommandBase) AllowInterspersedFlags() bool {
 // should interpret file names relative to Dir (see AbsPath below), and print
 // output and errors to Stdout and Stderr respectively.
 type Context struct {
+	context.Context
 	Dir              string
 	Env              map[string]string
 	Stdin            io.Reader
@@ -117,6 +119,13 @@ type Context struct {
 	quiet            bool
 	verbose          bool
 	serialisable     bool
+}
+
+// With returns a command context with the specified context.Context.
+func (ctx *Context) With(c context.Context) *Context {
+	newCtx := *ctx
+	newCtx.Context = c
+	return &newCtx
 }
 
 // Quiet reports whether the command is in "quiet" mode. When
@@ -407,12 +416,14 @@ func DefaultContext() (*Context, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &Context{
+	ctx := &Context{
 		Dir:    abs,
 		Stdin:  os.Stdin,
 		Stdout: os.Stdout,
 		Stderr: os.Stderr,
-	}, nil
+	}
+	ctx.Context = context.Background()
+	return ctx, nil
 }
 
 // CheckEmpty is a utility function that returns an error if args is not empty.

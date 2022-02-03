@@ -5,17 +5,20 @@ package cmd_test
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
+	jc "github.com/juju/testing/checkers"
 	gc "gopkg.in/check.v1"
+
+	"github.com/juju/gnuflag"
+	"github.com/juju/testing"
 
 	"github.com/juju/cmd/v3"
 	"github.com/juju/cmd/v3/cmdtesting"
-	"github.com/juju/gnuflag"
-	"github.com/juju/testing"
 )
 
 var _ = gc.Suite(&CmdSuite{})
@@ -27,11 +30,20 @@ type CmdSuite struct {
 
 func (s *CmdSuite) TestContext(c *gc.C) {
 	ctx := cmdtesting.Context(c)
+	c.Check(ctx.Context, jc.DeepEquals, context.Background())
 	c.Check(ctx.AbsPath("/foo/bar"), gc.Equals, "/foo/bar")
 	c.Check(ctx.AbsPath("/foo/../bar"), gc.Equals, "/bar")
 	c.Check(ctx.AbsPath("foo/bar"), gc.Equals, filepath.Join(ctx.Dir, "foo/bar"))
 	homeDir := os.Getenv("HOME")
 	c.Check(ctx.AbsPath("~/foo/bar"), gc.Equals, filepath.Join(homeDir, "foo/bar"))
+}
+
+func (s *CmdSuite) TestWith(c *gc.C) {
+	ctx := cmdtesting.Context(c)
+	cancelCtx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	ctx = ctx.With(cancelCtx)
+	c.Assert(ctx.Context, jc.DeepEquals, cancelCtx)
 }
 
 func (s *CmdSuite) TestContextGetenv(c *gc.C) {
