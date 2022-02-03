@@ -5,6 +5,7 @@ package cmdtesting
 
 import (
 	"bytes"
+	"context"
 	"io/ioutil"
 
 	"github.com/juju/gnuflag"
@@ -36,23 +37,27 @@ func InitCommand(c cmd.Command, args []string) error {
 // Context creates a simple command execution context with the current
 // dir set to a newly created directory within the test directory.
 func Context(c *gc.C) *cmd.Context {
-	return &cmd.Context{
+	ctx := &cmd.Context{
 		Dir:    c.MkDir(),
 		Stdin:  &bytes.Buffer{},
 		Stdout: &bytes.Buffer{},
 		Stderr: &bytes.Buffer{},
 	}
+	ctx.Context = context.TODO()
+	return ctx
 }
 
 // ContextForDir creates a simple command execution context with the current
 // dir set to the specified directory.
 func ContextForDir(c *gc.C, dir string) *cmd.Context {
-	return &cmd.Context{
+	ctx := &cmd.Context{
 		Dir:    dir,
 		Stdin:  &bytes.Buffer{},
 		Stdout: &bytes.Buffer{},
 		Stderr: &bytes.Buffer{},
 	}
+	ctx.Context = context.TODO()
+	return ctx
 }
 
 // Stdout takes a command Context that we assume has been created in this
