@@ -42,13 +42,13 @@ func (l *Log) GetLogWriter(target io.Writer) loggo.Writer {
 // AddFlags adds appropriate flags to f.
 func (l *Log) AddFlags(f *gnuflag.FlagSet) {
 	f.StringVar(&l.Path, "log-file", "", "path to write log to")
-	f.BoolVar(&l.Verbose, "v", false, "show more verbose output")
-	f.BoolVar(&l.Verbose, "verbose", false, "show more verbose output")
-	f.BoolVar(&l.Quiet, "q", false, "show no informational output")
-	f.BoolVar(&l.Quiet, "quiet", false, "show no informational output")
-	f.BoolVar(&l.Debug, "debug", false, "equivalent to --show-log --logging-config=<root>=DEBUG")
-	f.StringVar(&l.Config, "logging-config", l.DefaultConfig, "specify log levels for modules")
-	f.BoolVar(&l.ShowLog, "show-log", false, "if set, write the log file to stderr")
+	f.BoolVar(&l.Verbose, "v", false, "Show more verbose output")
+	f.BoolVar(&l.Verbose, "verbose", false, "Show more verbose output")
+	f.BoolVar(&l.Quiet, "q", false, "Show no informational output")
+	f.BoolVar(&l.Quiet, "quiet", false, "Show no informational output")
+	f.BoolVar(&l.Debug, "debug", false, "Equivalent to --show-log --logging-config=<root>=DEBUG")
+	f.StringVar(&l.Config, "logging-config", l.DefaultConfig, "Specify log levels for modules")
+	f.BoolVar(&l.ShowLog, "show-log", false, "If set, write the log file to stderr")
 }
 
 // Start starts logging using the given Context.
