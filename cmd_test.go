@@ -23,6 +23,7 @@ import (
 
 var _ = gc.Suite(&CmdSuite{})
 var _ = gc.Suite(&CmdHelpSuite{})
+var _ = gc.Suite(&CmdDocumentationSuite{})
 
 type CmdSuite struct {
 	testing.LoggingCleanupSuite
@@ -381,3 +382,20 @@ Details:
 command details
 `[1:])
 }
+
+type CmdDocumentationSuite struct {
+	testing.LoggingCleanupSuite
+
+	targetCmd cmd.Command
+}
+
+// func (s *CmdDocumentationSuite) TestDocumentationOutput(c *gc.C) {
+// 	subCmdA := &TestCommand{Name: "subCmdA"}
+// 	subCmdB := &TestCommand{Name: "subCmdB"}
+// 	params := cmd.SuperCommandParams{
+// 		Name:    "superCmd",
+// 		Doc:     "superCmd-Doc",
+// 		Version: "v1.0.0",
+// 	}
+// 	superCmd := cmd.NewSuperCommand(params)
+// }

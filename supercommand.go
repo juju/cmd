@@ -172,6 +172,7 @@ type SuperCommand struct {
 	userAliases         map[string][]string
 	subcmds             map[string]commandReference
 	help                *helpCommand
+	documentation       *documentationCommand
 	commonflags         *gnuflag.FlagSet
 	flags               *gnuflag.FlagSet
 	action              commandReference
@@ -208,9 +209,16 @@ func (c *SuperCommand) init() {
 		super: c,
 	}
 	c.help.init()
+
+	c.documentation = &documentationCommand{
+		super: c,
+	}
 	c.subcmds = map[string]commandReference{
 		"help": {command: c.help},
+		"documentation": {command: newDocumentationCommand(c),
+			name: "documentation"},
 	}
+
 	if c.version != "" {
 		c.subcmds["version"] = commandReference{
 			command: newVersionCommand(c.version, c.versionDetail),
@@ -447,6 +455,7 @@ func (c *SuperCommand) Init(args []string) error {
 		args = append(userAlias, args[1:]...)
 	}
 	found := false
+
 	// Look for the command.
 	if c.action, found = c.subcmds[args[0]]; !found {
 		if c.missingCallback != nil {
@@ -463,6 +472,7 @@ func (c *SuperCommand) Init(args []string) error {
 		}
 		return fmt.Errorf("unrecognized command: %s %s", c.Name, args[0])
 	}
+
 	args = args[1:]
 	subcmd := c.action.command
 	if subcmd.IsSuperCommand() {
@@ -475,6 +485,7 @@ func (c *SuperCommand) Init(args []string) error {
 	if err := c.commonflags.Parse(subcmd.AllowInterspersedFlags(), args); err != nil {
 		return err
 	}
+
 	args = c.commonflags.Args()
 	if c.showHelp {
 		// We want to treat help for the command the same way we would if we went "help foo".
