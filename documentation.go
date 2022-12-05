@@ -113,7 +113,7 @@ func (c *documentationCommand) formatCommand(ref commandReference) string {
 
 	// Arguments
 	if ref.command.Info().Args != "" {
-		formatted += "## Arguments\n" + ref.command.Info().Args + "\n\n"
+		formatted += "## Arguments\n```" + ref.command.Info().Args + "```\n\n"
 	}
 
 	// Description
