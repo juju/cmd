@@ -40,7 +40,7 @@ func (s *VersionSuite) TestVersionExtraArgs(c *gc.C) {
 	code := cmd.Main(cmd.NewVersionCommand("xxx", nil), ctx, []string{"foo"})
 	c.Check(code, gc.Equals, 2)
 	c.Assert(cmdtesting.Stdout(ctx), gc.Equals, "")
-	c.Assert(cmdtesting.Stderr(ctx), gc.Matches, "ERROR unrecognized args.*\n")
+	c.Assert(c.GetTestLog(), gc.Matches, `(?s).*unrecognized args.*`)
 }
 
 func (s *VersionSuite) TestVersionJson(c *gc.C) {

@@ -517,7 +517,7 @@ func (c *SuperCommand) Run(ctx *Context) error {
 		c.notifyRun(name)
 	}
 	if deprecated, replacement := c.action.Deprecated(); deprecated {
-		ctx.Infof("WARNING: %q is deprecated, please use %q", c.action.name, replacement)
+		ctx.Warningf("%q is deprecated, please use %q", c.action.name, replacement)
 	}
 
 	err := c.action.command.Run(ctx)
