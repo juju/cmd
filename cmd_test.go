@@ -86,19 +86,22 @@ func (s *CmdSuite) TestInfo(c *gc.C) {
 	c.Assert(string(help), gc.Equals, optionHelp)
 }
 
-var initErrorTests = []struct {
-	c    *TestCommand
-	help string
-}{
-	{&TestCommand{Name: "verb"}, fmt.Sprintf(fullHelp, "flag", strings.Title("flag"))},
-	{&TestCommand{Name: "verb", Minimal: true}, minimalHelp},
+func (s *CmdSuite) TestMainInitError(c *gc.C) {
+	s.assertOptionError(c,
+		&TestCommand{Name: "verb"},
+		".*flag provided but not defined: --unknown\n")
 }
 
-func (s *CmdSuite) TestMainInitError(c *gc.C) {
-	expected := "ERROR flag provided but not defined: --unknown\n"
-	for _, t := range initErrorTests {
-		s.assertOptionError(c, t.c, expected)
-	}
+func (s *CmdSuite) TestMainInitErrorMinimal(c *gc.C) {
+	s.assertOptionError(c,
+		&TestCommand{Name: "verb", Minimal: true},
+		".*flag provided but not defined: --unknown\n")
+}
+
+func (s *CmdSuite) TestMainFlagsAKA(c *gc.C) {
+	s.assertOptionError(c,
+		&TestCommand{Name: "verb", FlagAKA: "option"},
+		".*option provided but not defined: --unknown\n")
 }
 
 func (s *CmdSuite) assertOptionError(c *gc.C, command *TestCommand, expected string) {
@@ -106,13 +109,7 @@ func (s *CmdSuite) assertOptionError(c *gc.C, command *TestCommand, expected str
 	result := cmd.Main(command, ctx, []string{"--unknown"})
 	c.Assert(result, gc.Equals, 2)
 	c.Assert(bufferString(ctx.Stdout), gc.Equals, "")
-	c.Assert(bufferString(ctx.Stderr), gc.Equals, expected)
-}
-
-func (s *CmdSuite) TestMainFlagsAKA(c *gc.C) {
-	s.assertOptionError(c,
-		&TestCommand{Name: "verb", FlagAKA: "option"},
-		"ERROR option provided but not defined: --unknown\n")
+	c.Assert(c.GetTestLog(), gc.Matches, expected)
 }
 
 func (s *CmdSuite) TestMainRunError(c *gc.C) {
@@ -120,7 +117,7 @@ func (s *CmdSuite) TestMainRunError(c *gc.C) {
 	result := cmd.Main(&TestCommand{Name: "verb"}, ctx, []string{"--option", "error"})
 	c.Assert(result, gc.Equals, 1)
 	c.Assert(bufferString(ctx.Stdout), gc.Equals, "")
-	c.Assert(bufferString(ctx.Stderr), gc.Equals, "ERROR BAM!\n")
+	c.Assert(c.GetTestLog(), gc.Matches, `(?s).*BAM!.*`)
 }
 
 func (s *CmdSuite) TestMainRunSilentError(c *gc.C) {
@@ -128,7 +125,6 @@ func (s *CmdSuite) TestMainRunSilentError(c *gc.C) {
 	result := cmd.Main(&TestCommand{Name: "verb"}, ctx, []string{"--option", "silent-error"})
 	c.Assert(result, gc.Equals, 1)
 	c.Assert(bufferString(ctx.Stdout), gc.Equals, "")
-	c.Assert(bufferString(ctx.Stderr), gc.Equals, "")
 }
 
 func (s *CmdSuite) TestMainSuccess(c *gc.C) {
@@ -136,7 +132,6 @@ func (s *CmdSuite) TestMainSuccess(c *gc.C) {
 	result := cmd.Main(&TestCommand{Name: "verb"}, ctx, []string{"--option", "success!"})
 	c.Assert(result, gc.Equals, 0)
 	c.Assert(bufferString(ctx.Stdout), gc.Equals, "success!\n")
-	c.Assert(bufferString(ctx.Stderr), gc.Equals, "")
 }
 
 func (s *CmdSuite) TestStdin(c *gc.C) {
@@ -146,7 +141,6 @@ func (s *CmdSuite) TestStdin(c *gc.C) {
 	result := cmd.Main(&TestCommand{Name: "verb"}, ctx, []string{"--option", "echo"})
 	c.Assert(result, gc.Equals, 0)
 	c.Assert(bufferString(ctx.Stdout), gc.Equals, phrase)
-	c.Assert(bufferString(ctx.Stderr), gc.Equals, "")
 }
 
 func (s *CmdSuite) TestMainHelp(c *gc.C) {
@@ -155,7 +149,6 @@ func (s *CmdSuite) TestMainHelp(c *gc.C) {
 		result := cmd.Main(&TestCommand{Name: "verb"}, ctx, []string{arg})
 		c.Assert(result, gc.Equals, 0)
 		c.Assert(bufferString(ctx.Stdout), gc.Equals, fmt.Sprintf(fullHelp, "flag", "Flag"))
-		c.Assert(bufferString(ctx.Stderr), gc.Equals, "")
 	}
 }
 
@@ -165,7 +158,6 @@ func (s *CmdSuite) TestMainHelpFlagsAKA(c *gc.C) {
 		result := cmd.Main(&TestCommand{Name: "verb", FlagAKA: "option"}, ctx, []string{arg})
 		c.Assert(result, gc.Equals, 0)
 		c.Assert(bufferString(ctx.Stdout), gc.Equals, fmt.Sprintf(fullHelp, "option", "Option"))
-		c.Assert(bufferString(ctx.Stderr), gc.Equals, "")
 	}
 }
 

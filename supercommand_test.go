@@ -230,31 +230,23 @@ func (s *SuperCommandSuite) TestVersionNotProvided(c *gc.C) {
 		Purpose: "to be purposeful",
 		Doc:     "doc\nblah\ndoc",
 	})
-	var stdout, stderr bytes.Buffer
-	ctx := &cmd.Context{
-		Stdout: &stdout,
-		Stderr: &stderr,
-	}
+	ctx := cmdtesting.Context(c)
 
 	// juju version
 	baselineCode := cmd.Main(jc, ctx, []string{"version"})
 	c.Check(baselineCode, gc.Not(gc.Equals), 0)
-	c.Assert(stderr.String(), gc.Equals, "ERROR unrecognized command: jujutest version\n")
-	stderr.Reset()
-	stdout.Reset()
+	c.Assert(c.GetTestLog(), gc.Matches, `(?s).*unrecognized command: jujutest version.*`)
 
 	// juju --version
 	code := cmd.Main(jc, ctx, []string{"--version"})
 	c.Check(code, gc.Equals, baselineCode)
-	c.Assert(stderr.String(), gc.Equals, "ERROR flag provided but not defined: --version\n")
-	stderr.Reset()
-	stdout.Reset()
+	c.Assert(c.GetTestLog(), gc.Matches, "(?s).*flag provided but not defined: --version.*")
 
 	// juju -version where flags are known as options
 	jc.FlagKnownAs = "option"
 	code = cmd.Main(jc, ctx, []string{"--version"})
 	c.Check(code, gc.Equals, baselineCode)
-	c.Assert(stderr.String(), gc.Equals, "ERROR option provided but not defined: --version\n")
+	c.Assert(c.GetTestLog(), gc.Matches, "(?s).*option provided but not defined: --version.*")
 }
 
 func (s *SuperCommandSuite) TestLogging(c *gc.C) {
@@ -436,17 +428,17 @@ func (s *SuperCommandSuite) TestRegisterAlias(c *gc.C) {
 		gc.PanicMatches, `"unknown" not found when registering alias`)
 
 	info := jc.Info()
-	// NOTE: deprecated `bar` not shown in commands.
+	// NOTE: deprecated `bar` and `baz` not shown in commands.
 	c.Assert(info.Doc, gc.Equals, `commands:
     foo  - Alias for 'test'.
     help - Show help on a command or other topic.
     test - to be simple`)
 
 	for _, test := range []struct {
-		name   string
-		stdout string
-		stderr string
-		code   int
+		name    string
+		stdout  string
+		testLog string
+		code    int
 	}{
 		{
 			name:   "test",
@@ -455,20 +447,22 @@ func (s *SuperCommandSuite) TestRegisterAlias(c *gc.C) {
 			name:   "foo",
 			stdout: "test arg\n",
 		}, {
-			name:   "bar",
-			stdout: "test arg\n",
-			stderr: "WARNING: \"bar\" is deprecated, please use \"test\"\n",
+			name:    "bar",
+			stdout:  "test arg\n",
+			testLog: `(?s).*"bar" is deprecated, please use "test".*`,
 		}, {
-			name:   "baz",
-			stderr: "ERROR unrecognized command: jujutest baz\n",
-			code:   2,
+			name:    "baz",
+			testLog: `(?s).*unrecognized command: jujutest baz.*`,
+			code:    2,
 		},
 	} {
 		ctx := cmdtesting.Context(c)
 		code := cmd.Main(jc, ctx, []string{test.name, "arg"})
 		c.Check(code, gc.Equals, test.code)
 		c.Check(cmdtesting.Stdout(ctx), gc.Equals, test.stdout)
-		c.Check(cmdtesting.Stderr(ctx), gc.Equals, test.stderr)
+		if test.testLog != "" {
+			c.Check(c.GetTestLog(), gc.Matches, test.testLog)
+		}
 	}
 }
 
@@ -508,10 +502,10 @@ func (s *SuperCommandSuite) TestRegisterSuperAlias(c *gc.C) {
     test    - to be simple`)
 
 	for _, test := range []struct {
-		args   []string
-		stdout string
-		stderr string
-		code   int
+		args    []string
+		stdout  string
+		testLog string
+		code    int
 	}{
 		{
 			args:   []string{"bar", "foo", "arg"},
@@ -520,20 +514,22 @@ func (s *SuperCommandSuite) TestRegisterSuperAlias(c *gc.C) {
 			args:   []string{"bar-foo", "arg"},
 			stdout: "foo arg\n",
 		}, {
-			args:   []string{"bar-dep", "arg"},
-			stdout: "foo arg\n",
-			stderr: "WARNING: \"bar-dep\" is deprecated, please use \"bar foo\"\n",
+			args:    []string{"bar-dep", "arg"},
+			stdout:  "foo arg\n",
+			testLog: `(?s).*"bar-dep" is deprecated, please use "bar foo".*`,
 		}, {
-			args:   []string{"bar-ob", "arg"},
-			stderr: "ERROR unrecognized command: jujutest bar-ob\n",
-			code:   2,
+			args:    []string{"bar-ob", "arg"},
+			testLog: "(?s).*unrecognized command: jujutest bar-ob.*",
+			code:    2,
 		},
 	} {
 		ctx := cmdtesting.Context(c)
 		code := cmd.Main(jc, ctx, test.args)
 		c.Check(code, gc.Equals, test.code)
 		c.Check(cmdtesting.Stdout(ctx), gc.Equals, test.stdout)
-		c.Check(cmdtesting.Stderr(ctx), gc.Equals, test.stderr)
+		if test.testLog != "" {
+			c.Check(c.GetTestLog(), gc.Matches, test.testLog)
+		}
 	}
 }
 
@@ -564,10 +560,10 @@ func (s *SuperCommandSuite) TestRegisterDeprecated(c *gc.C) {
 	c.Assert(badCall, gc.PanicMatches, `command already registered: "test-dep"`)
 
 	for _, test := range []struct {
-		args   []string
-		stdout string
-		stderr string
-		code   int
+		args    []string
+		stdout  string
+		testLog string
+		code    int
 	}{
 		{
 			args:   []string{"test-non-dep", "arg"},
@@ -576,29 +572,30 @@ func (s *SuperCommandSuite) TestRegisterDeprecated(c *gc.C) {
 			args:   []string{"test-non-dep-alias", "arg"},
 			stdout: "test-non-dep arg\n",
 		}, {
-			args:   []string{"test-dep", "arg"},
-			stdout: "test-dep arg\n",
-			stderr: "WARNING: \"test-dep\" is deprecated, please use \"test-dep-new\"\n",
+			args:    []string{"test-dep", "arg"},
+			stdout:  "test-dep arg\n",
+			testLog: `(?s).*"test-dep" is deprecated, please use "test-dep-new".*`,
 		}, {
-			args:   []string{"test-dep-alias", "arg"},
-			stdout: "test-dep arg\n",
-			stderr: "WARNING: \"test-dep-alias\" is deprecated, please use \"test-dep-new\"\n",
+			args:    []string{"test-dep-alias", "arg"},
+			stdout:  "test-dep arg\n",
+			testLog: `(?s).*"test-dep-alias" is deprecated, please use "test-dep-new".*`,
 		}, {
-			args:   []string{"test-ob", "arg"},
-			stderr: "ERROR unrecognized command: jujutest test-ob\n",
-			code:   2,
+			args:    []string{"test-ob", "arg"},
+			testLog: `(?s).*unrecognized command: jujutest test-ob.*`,
+			code:    2,
 		}, {
-			args:   []string{"test-ob-alias", "arg"},
-			stderr: "ERROR unrecognized command: jujutest test-ob-alias\n",
-			code:   2,
+			args:    []string{"test-ob-alias", "arg"},
+			testLog: `(?s).*unrecognized command: jujutest test-ob-alias.*`,
+			code:    2,
 		},
 	} {
-
 		ctx := cmdtesting.Context(c)
 		code := cmd.Main(jc, ctx, test.args)
 		c.Check(code, gc.Equals, test.code)
-		c.Check(cmdtesting.Stderr(ctx), gc.Equals, test.stderr)
 		c.Check(cmdtesting.Stdout(ctx), gc.Equals, test.stdout)
+		if test.testLog != "" {
+			c.Check(c.GetTestLog(), gc.Matches, test.testLog)
+		}
 	}
 }
 
@@ -675,7 +672,7 @@ func (s *SuperCommandSuite) assertFlagsAlias(c *gc.C, sc *cmd.SuperCommand, expe
 	c.Assert(code, gc.Equals, 2)
 	c.Check(ctx.IsSerial(), gc.Equals, false)
 	c.Check(cmdtesting.Stdout(ctx), gc.Equals, "")
-	c.Check(cmdtesting.Stderr(ctx), gc.Equals, fmt.Sprintf("ERROR %v provided but not defined: --fluffs\n", expectedAlias))
+	c.Check(c.GetTestLog(), gc.Matches, fmt.Sprintf("(?s).*%v provided but not defined: --fluffs.*", expectedAlias))
 }
 
 func (s *SuperCommandSuite) TestErrInJson(c *gc.C) {

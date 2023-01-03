@@ -170,10 +170,10 @@ func (ctx *Context) Infof(format string, params ...interface{}) {
 // command to fail (e.g. an error message used as a deprecation warning that
 // will be upgraded to a real error message at some point in the future.)
 func (ctx *Context) Warningf(format string, params ...interface{}) {
-	//Here we use the Loggo.logger method `Logf` as opposed to
-	//`logger.Warningf` to avoid introducing an additional call stack level
-	//(since `Warningf` calls Logf internally). This is done so that this
-	//function can produce more accurate source location debug information.
+	// Here we use the Loggo.logger method `Logf` as opposed to
+	// `logger.Warningf` to avoid introducing an additional call stack level
+	// (since `Warningf` calls Logf internally). This is done so that this
+	// function can produce more accurate source location debug information.
 	logger.Logf(loggo.WARNING, format, params...)
 }
 
@@ -183,17 +183,33 @@ func (ctx *Context) Verbosef(format string, params ...interface{}) {
 	if ctx.verbose {
 		ctx.write(format, params...)
 	} else {
-		//Here we use the Loggo.logger method `Logf` as opposed to
-		//`logger.Infof` to avoid introducing an additional call stack
-		//level (since `Infof` calls `Logf` internally). This is done so
-		//that this function can produce more accurate source location
-		//debug information.
+		// Here we use the Loggo.logger method `Logf` as opposed to
+		// `logger.Infof` to avoid introducing an additional call stack
+		// level (since `Infof` calls `Logf` internally). This is done so
+		// that this function can produce more accurate source location
+		// debug information.
 		logger.Logf(loggo.INFO, format, params...)
 	}
 }
 
+// Errorf allows for the logging of error messages from a command's
+// context. This should be used for errors which cause a command to fail.
+// Usually these errors are logged by returning them in Run, but that is
+// not always sufficent. For instance, if the client has performed multiple
+// actions
+func (ctx *Context) Errorf(format string, params ...interface{}) {
+	// Here we use the Loggo.logger method `Logf` as opposed to
+	// `logger.Errorf` to avoid introducing an additional call stack
+	// level (since `Errorf` calls `Logf` internally). This is done so
+	// that this function can produce more accurate source location
+	// debug information.
+	logger.Logf(loggo.ERROR, format, params...)
+}
+
 // WriteError will output the formatted text to the writer with
 // a colored ERROR like the logging would.
+//
+// DEPRECATED: Use ctx.Errorf instead
 func WriteError(writer io.Writer, err error) {
 	w := ansiterm.NewWriter(writer)
 	ansiterm.Foreground(ansiterm.BrightRed).Fprintf(w, "ERROR")
@@ -366,7 +382,7 @@ func handleCommandError(c Command, ctx *Context, err error, f *gnuflag.FlagSet) 
 	case ErrSilent:
 		return 2, true
 	default:
-		WriteError(ctx.Stderr, err)
+		ctx.Errorf("%s", err)
 		return 2, true
 	}
 }
@@ -399,7 +415,7 @@ func Main(c Command, ctx *Context, args []string) int {
 			return err.(*RcPassthroughError).Code
 		}
 		if err != ErrSilent {
-			WriteError(ctx.Stderr, err)
+			ctx.Errorf("%s", err)
 		}
 		return 1
 	}

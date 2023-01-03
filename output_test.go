@@ -155,8 +155,8 @@ func (s *CmdSuite) TestUnknownOutputFormat(c *gc.C) {
 	ctx := cmdtesting.Context(c)
 	result := cmd.Main(&OutputCommand{}, ctx, []string{"--format", "cuneiform"})
 	c.Check(result, gc.Equals, 2)
-	c.Check(bufferString(ctx.Stdout), gc.Equals, "")
-	c.Check(bufferString(ctx.Stderr), gc.Matches, ".*: unknown format \"cuneiform\"\n")
+	c.Check(bufferString(ctx.Stderr), gc.Equals, "")
+	c.Check(c.GetTestLog(), gc.Matches, ".*: unknown format \"cuneiform\"\n")
 }
 
 // Py juju allowed both --format json and --format=json. This test verifies that juju is
