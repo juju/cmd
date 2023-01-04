@@ -111,9 +111,15 @@ func (c *documentationCommand) formatCommand(ref commandReference) string {
 	// Description
 	formatted += "## Summary\n" + ref.command.Info().Purpose + "\n\n"
 
-	// Arguments
+	// Usage
 	if ref.command.Info().Args != "" {
-		formatted += "## Arguments\n```" + ref.command.Info().Args + "```\n\n"
+		formatted += "## Usage\n```" + ref.command.Info().Args + "```\n\n"
+	}
+
+	// Options
+	formattedFlags := c.formatFlags(ref.command)
+	if len(formattedFlags) > 0 {
+		formatted += "## Options\n" + formattedFlags + "\n"
 	}
 
 	// Description
@@ -126,4 +132,78 @@ func (c *documentationCommand) formatCommand(ref commandReference) string {
 
 	return formatted
 
+}
+
+// formatFlags is an internal formatting solution similar to
+// the gnuflag.PrintDefaults. The code is extended here
+// to permit additional formatting without modifying the
+// gnuflag package.
+func (d *documentationCommand) formatFlags(c Command) string {
+	flagsAKA := FlagAlias(c, "")
+	if flagsAKA == "" {
+		// For backward compatibility, the default is 'flag'.
+		flagsAKA = "flag"
+	}
+	f := gnuflag.NewFlagSetWithFlagKnownAs(c.Info().Name, gnuflag.ContinueOnError, flagsAKA)
+	c.SetFlags(f)
+	// group together all flags for a given value
+	flags := make(map[interface{}]flagsByLength)
+	f.VisitAll(func(f *gnuflag.Flag) {
+		flags[f.Value] = append(flags[f.Value], f)
+	})
+
+	// sort the output flags by shortest name for each group.
+	var byName flagsByName
+	for _, fl := range flags {
+		sort.Sort(fl)
+		byName = append(byName, fl)
+	}
+	sort.Sort(byName)
+
+	formatted := "| Flag | Default | Usage |\n"
+	formatted += "| --- | --- | --- |\n"
+	for _, fs := range byName {
+		theFlags := ""
+		for i, f := range fs {
+			if i > 0 {
+				theFlags += ", "
+			}
+			theFlags += fmt.Sprintf("`--%s`", f.Name)
+		}
+		formatted += fmt.Sprintf("| %s | %s | %s |\n", theFlags, fs[0].DefValue, fs[0].Usage)
+	}
+	return formatted
+}
+
+// flagsByLength is a slice of flags implementing sort.Interface,
+// sorting primarily by the length of the flag, and secondarily
+// alphabetically.
+type flagsByLength []*gnuflag.Flag
+
+func (f flagsByLength) Less(i, j int) bool {
+	s1, s2 := f[i].Name, f[j].Name
+	if len(s1) != len(s2) {
+		return len(s1) < len(s2)
+	}
+	return s1 < s2
+}
+func (f flagsByLength) Swap(i, j int) {
+	f[i], f[j] = f[j], f[i]
+}
+func (f flagsByLength) Len() int {
+	return len(f)
+}
+
+// flagsByName is a slice of slices of flags implementing sort.Interface,
+// alphabetically sorting by the name of the first flag in each slice.
+type flagsByName [][]*gnuflag.Flag
+
+func (f flagsByName) Less(i, j int) bool {
+	return f[i][0].Name < f[j][0].Name
+}
+func (f flagsByName) Swap(i, j int) {
+	f[i], f[j] = f[j], f[i]
+}
+func (f flagsByName) Len() int {
+	return len(f)
 }
