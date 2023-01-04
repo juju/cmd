@@ -4,7 +4,6 @@
 package cmd_test
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -12,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/juju/gnuflag"
+	"github.com/juju/loggo"
 	gitjujutesting "github.com/juju/testing"
 	gc "gopkg.in/check.v1"
 
@@ -43,12 +43,20 @@ other = missing
 
 type SuperCommandSuite struct {
 	gitjujutesting.IsolationSuite
+
+	ctx *cmd.Context
 }
 
 var _ = gc.Suite(&SuperCommandSuite{})
 
 const helpText = "\n    help\\s+- Show help on a command or other topic."
 const helpCommandsText = "commands:" + helpText
+
+func (s *SuperCommandSuite) SetUpTest(c *gc.C) {
+	s.IsolationSuite.SetUpTest(c)
+	s.ctx = cmdtesting.Context(c)
+	loggo.ReplaceDefaultWriter(cmd.NewWarningWriter(s.ctx.Stderr))
+}
 
 func (s *SuperCommandSuite) TestDispatch(c *gc.C) {
 	jc := cmd.NewSuperCommand(cmd.SuperCommandParams{Name: "jujutest"})
@@ -192,35 +200,31 @@ func (s *SuperCommandSuite) TestVersionFlag(c *gc.C) {
 	testVersionFlagCommand := &testVersionFlagCommand{}
 	jc.Register(testVersionFlagCommand)
 
-	var stdout, stderr bytes.Buffer
-	ctx := &cmd.Context{
-		Stdout: &stdout,
-		Stderr: &stderr,
-	}
-
 	// baseline: juju version
-	code := cmd.Main(jc, ctx, []string{"version"})
+	code := cmd.Main(jc, s.ctx, []string{"version"})
 	c.Check(code, gc.Equals, 0)
-	baselineStderr := stderr.String()
-	baselineStdout := stdout.String()
-	stderr.Reset()
-	stdout.Reset()
+	baselineStderr := cmdtesting.Stderr(s.ctx)
+	baselineStdout := cmdtesting.Stdout(s.ctx)
+
+	s.TearDownTest(c)
+	s.SetUpTest(c)
 
 	// juju --version output should match that of juju version.
-	code = cmd.Main(jc, ctx, []string{"--version"})
+	code = cmd.Main(jc, s.ctx, []string{"--version"})
 	c.Check(code, gc.Equals, 0)
-	c.Assert(stderr.String(), gc.Equals, baselineStderr)
-	c.Assert(stdout.String(), gc.Equals, baselineStdout)
-	stderr.Reset()
-	stdout.Reset()
+	c.Assert(cmdtesting.Stderr(s.ctx), gc.Equals, baselineStderr)
+	c.Assert(cmdtesting.Stdout(s.ctx), gc.Equals, baselineStdout)
+
+	s.TearDownTest(c)
+	s.SetUpTest(c)
 
 	// juju test --version should update testVersionFlagCommand.version,
 	// and there should be no output. The --version flag on the 'test'
 	// subcommand has a different type to the "juju --version" flag.
-	code = cmd.Main(jc, ctx, []string{"test", "--version=abc.123"})
+	code = cmd.Main(jc, s.ctx, []string{"test", "--version=abc.123"})
 	c.Check(code, gc.Equals, 0)
-	c.Assert(stderr.String(), gc.Equals, "")
-	c.Assert(stdout.String(), gc.Equals, "")
+	c.Assert(cmdtesting.Stderr(s.ctx), gc.Equals, "")
+	c.Assert(cmdtesting.Stdout(s.ctx), gc.Equals, "")
 	c.Assert(testVersionFlagCommand.version, gc.Equals, "abc.123")
 }
 
@@ -230,23 +234,28 @@ func (s *SuperCommandSuite) TestVersionNotProvided(c *gc.C) {
 		Purpose: "to be purposeful",
 		Doc:     "doc\nblah\ndoc",
 	})
-	ctx := cmdtesting.Context(c)
 
 	// juju version
-	baselineCode := cmd.Main(jc, ctx, []string{"version"})
+	baselineCode := cmd.Main(jc, s.ctx, []string{"version"})
 	c.Check(baselineCode, gc.Not(gc.Equals), 0)
-	c.Assert(c.GetTestLog(), gc.Matches, `(?s).*unrecognized command: jujutest version.*`)
+	c.Assert(cmdtesting.Stderr(s.ctx), gc.Equals, "ERROR unrecognized command: jujutest version\n")
+
+	s.TearDownTest(c)
+	s.SetUpTest(c)
 
 	// juju --version
-	code := cmd.Main(jc, ctx, []string{"--version"})
+	code := cmd.Main(jc, s.ctx, []string{"--version"})
 	c.Check(code, gc.Equals, baselineCode)
-	c.Assert(c.GetTestLog(), gc.Matches, "(?s).*flag provided but not defined: --version.*")
+	c.Assert(cmdtesting.Stderr(s.ctx), gc.Equals, "ERROR flag provided but not defined: --version\n")
+
+	s.TearDownTest(c)
+	s.SetUpTest(c)
 
 	// juju -version where flags are known as options
 	jc.FlagKnownAs = "option"
-	code = cmd.Main(jc, ctx, []string{"--version"})
+	code = cmd.Main(jc, s.ctx, []string{"--version"})
 	c.Check(code, gc.Equals, baselineCode)
-	c.Assert(c.GetTestLog(), gc.Matches, "(?s).*option provided but not defined: --version.*")
+	c.Assert(cmdtesting.Stderr(s.ctx), gc.Equals, "ERROR option provided but not defined: --version\n")
 }
 
 func (s *SuperCommandSuite) TestLogging(c *gc.C) {
@@ -256,49 +265,53 @@ func (s *SuperCommandSuite) TestLogging(c *gc.C) {
 		Log:         &cmd.Log{},
 	})
 	sc.Register(&TestCommand{Name: "blah"})
-	ctx := cmdtesting.Context(c)
-	code := cmd.Main(sc, ctx, []string{"blah", "--option", "error", "--debug"})
+	code := cmd.Main(sc, s.ctx, []string{"blah", "--option", "error", "--debug"})
 	c.Assert(code, gc.Equals, 1)
-	c.Assert(bufferString(ctx.Stderr), gc.Matches, `(?m)ERROR BAM!\n.* DEBUG .* error stack: \n.*`)
+	c.Assert(cmdtesting.Stderr(s.ctx), gc.Matches, `(?m).* ERROR .* BAM!\n.* DEBUG .* error stack: \n.*`)
 }
 
-func (s *SuperCommandSuite) TestNotifyRun(c *gc.C) {
-	notifyTests := []struct {
-		usagePrefix string
-		name        string
-		expectName  string
-	}{
-		{"juju", "juju", "juju"},
-		{"something", "else", "something else"},
-		{"", "juju", "juju"},
-		{"", "myapp", "myapp"},
-	}
-	for i, test := range notifyTests {
-		c.Logf("test %d. %q %q", i, test.usagePrefix, test.name)
-		notifyName := ""
-		sc := cmd.NewSuperCommand(cmd.SuperCommandParams{
-			UsagePrefix: test.usagePrefix,
-			Name:        test.name,
-			NotifyRun: func(name string) {
-				notifyName = name
-			},
-		})
-		sc.Register(&TestCommand{Name: "blah"})
-		ctx := cmdtesting.Context(c)
-		code := cmd.Main(sc, ctx, []string{"blah", "--option", "error"})
-		c.Assert(bufferString(ctx.Stderr), gc.Matches, "ERROR BAM!\n")
-		c.Assert(code, gc.Equals, 1)
-		c.Assert(notifyName, gc.Equals, test.expectName)
-	}
+type notifyTest struct {
+	usagePrefix string
+	name        string
+	expectName  string
+}
+
+func (s *SuperCommandSuite) TestNotifyRunJujuJuju(c *gc.C) {
+	s.testNotifyRun(c, notifyTest{"juju", "juju", "juju"})
+}
+func (s *SuperCommandSuite) TestNotifyRunSomethingElse(c *gc.C) {
+	s.testNotifyRun(c, notifyTest{"something", "else", "something else"})
+}
+func (s *SuperCommandSuite) TestNotifyRunJuju(c *gc.C) {
+	s.testNotifyRun(c, notifyTest{"", "juju", "juju"})
+}
+func (s *SuperCommandSuite) TestNotifyRunMyApp(c *gc.C) {
+	s.testNotifyRun(c, notifyTest{"", "myapp", "myapp"})
+}
+
+func (s *SuperCommandSuite) testNotifyRun(c *gc.C, test notifyTest) {
+	notifyName := ""
+	sc := cmd.NewSuperCommand(cmd.SuperCommandParams{
+		UsagePrefix: test.usagePrefix,
+		Name:        test.name,
+		NotifyRun: func(name string) {
+			notifyName = name
+		},
+		Log: &cmd.Log{},
+	})
+	sc.Register(&TestCommand{Name: "blah"})
+	code := cmd.Main(sc, s.ctx, []string{"blah", "--option", "error"})
+	c.Assert(cmdtesting.Stderr(s.ctx), gc.Matches, "ERROR BAM!\n")
+	c.Assert(code, gc.Equals, 1)
+	c.Assert(notifyName, gc.Equals, test.expectName)
 }
 
 func (s *SuperCommandSuite) TestDescription(c *gc.C) {
 	jc := cmd.NewSuperCommand(cmd.SuperCommandParams{Name: "jujutest", Purpose: "blow up the death star"})
 	jc.Register(&TestCommand{Name: "blah"})
-	ctx := cmdtesting.Context(c)
-	code := cmd.Main(jc, ctx, []string{"blah", "--description"})
+	code := cmd.Main(jc, s.ctx, []string{"blah", "--description"})
 	c.Assert(code, gc.Equals, 0)
-	c.Assert(bufferString(ctx.Stdout), gc.Equals, "blow up the death star\n")
+	c.Assert(cmdtesting.Stdout(s.ctx), gc.Equals, "blow up the death star\n")
 }
 
 func NewSuperWithCallback(callback func(*cmd.Context, string, []string) error) cmd.Command {
@@ -333,11 +346,10 @@ func (s *SuperCommandSuite) TestMissingCallbackErrors(c *gc.C) {
 		return fmt.Errorf("command not found %q", subcommand)
 	}
 
-	ctx := cmdtesting.Context(c)
-	code := cmd.Main(NewSuperWithCallback(callback), ctx, []string{"foo"})
+	code := cmd.Main(NewSuperWithCallback(callback), s.ctx, []string{"foo"})
 	c.Assert(code, gc.Equals, 1)
-	c.Assert(cmdtesting.Stdout(ctx), gc.Equals, "")
-	c.Assert(cmdtesting.Stderr(ctx), gc.Equals, "ERROR command not found \"foo\"\n")
+	c.Assert(cmdtesting.Stdout(s.ctx), gc.Equals, "")
+	c.Assert(cmdtesting.Stderr(s.ctx), gc.Equals, "ERROR command not found \"foo\"\n")
 }
 
 func (s *SuperCommandSuite) TestMissingCallbackContextWiredIn(c *gc.C) {
@@ -347,11 +359,10 @@ func (s *SuperCommandSuite) TestMissingCallbackContextWiredIn(c *gc.C) {
 		return nil
 	}
 
-	ctx := cmdtesting.Context(c)
-	code := cmd.Main(NewSuperWithCallback(callback), ctx, []string{"foo", "bar", "baz", "--debug"})
+	code := cmd.Main(NewSuperWithCallback(callback), s.ctx, []string{"foo", "bar", "baz", "--debug"})
 	c.Assert(code, gc.Equals, 0)
-	c.Assert(cmdtesting.Stdout(ctx), gc.Equals, "this is std out")
-	c.Assert(cmdtesting.Stderr(ctx), gc.Equals, "this is std err")
+	c.Assert(cmdtesting.Stdout(s.ctx), gc.Equals, "this is std out")
+	c.Assert(cmdtesting.Stderr(s.ctx), gc.Equals, "this is std err")
 }
 
 func (s *SuperCommandSuite) TestSupercommandAliases(c *gc.C) {
@@ -369,11 +380,12 @@ func (s *SuperCommandSuite) TestSupercommandAliases(c *gc.C) {
 	jc.Register(sub)
 	for _, name := range []string{"jubar", "jubaz", "jubing"} {
 		c.Logf("testing command name %q", name)
-		ctx := cmdtesting.Context(c)
-		code := cmd.Main(jc, ctx, []string{name, "--help"})
+		s.SetUpTest(c)
+		code := cmd.Main(jc, s.ctx, []string{name, "--help"})
 		c.Assert(code, gc.Equals, 0)
-		stripped := strings.Replace(bufferString(ctx.Stdout), "\n", "", -1)
-		c.Assert(stripped, gc.Matches, ".*Usage: juju jujutest jubar.*Aliases: jubaz, jubing")
+		c.Assert(cmdtesting.Stdout(s.ctx), gc.Matches, "(?s).*Usage: juju jujutest jubar.*")
+		c.Assert(cmdtesting.Stdout(s.ctx), gc.Matches, "(?s).*Aliases: jubaz, jubing.*")
+		s.TearDownTest(c)
 	}
 }
 
@@ -428,17 +440,17 @@ func (s *SuperCommandSuite) TestRegisterAlias(c *gc.C) {
 		gc.PanicMatches, `"unknown" not found when registering alias`)
 
 	info := jc.Info()
-	// NOTE: deprecated `bar` and `baz` not shown in commands.
+	// NOTE: deprecated `bar` not shown in commands.
 	c.Assert(info.Doc, gc.Equals, `commands:
     foo  - Alias for 'test'.
     help - Show help on a command or other topic.
     test - to be simple`)
 
 	for _, test := range []struct {
-		name    string
-		stdout  string
-		testLog string
-		code    int
+		name   string
+		stdout string
+		stderr string
+		code   int
 	}{
 		{
 			name:   "test",
@@ -447,22 +459,21 @@ func (s *SuperCommandSuite) TestRegisterAlias(c *gc.C) {
 			name:   "foo",
 			stdout: "test arg\n",
 		}, {
-			name:    "bar",
-			stdout:  "test arg\n",
-			testLog: `(?s).*"bar" is deprecated, please use "test".*`,
+			name:   "bar",
+			stdout: "test arg\n",
+			stderr: "WARNING \"bar\" is deprecated, please use \"test\"\n",
 		}, {
-			name:    "baz",
-			testLog: `(?s).*unrecognized command: jujutest baz.*`,
-			code:    2,
+			name:   "baz",
+			stderr: "ERROR unrecognized command: jujutest baz\n",
+			code:   2,
 		},
 	} {
-		ctx := cmdtesting.Context(c)
-		code := cmd.Main(jc, ctx, []string{test.name, "arg"})
+		s.SetUpTest(c)
+		code := cmd.Main(jc, s.ctx, []string{test.name, "arg"})
 		c.Check(code, gc.Equals, test.code)
-		c.Check(cmdtesting.Stdout(ctx), gc.Equals, test.stdout)
-		if test.testLog != "" {
-			c.Check(c.GetTestLog(), gc.Matches, test.testLog)
-		}
+		c.Check(cmdtesting.Stdout(s.ctx), gc.Equals, test.stdout)
+		c.Check(cmdtesting.Stderr(s.ctx), gc.Equals, test.stderr)
+		s.TearDownTest(c)
 	}
 }
 
@@ -502,10 +513,10 @@ func (s *SuperCommandSuite) TestRegisterSuperAlias(c *gc.C) {
     test    - to be simple`)
 
 	for _, test := range []struct {
-		args    []string
-		stdout  string
-		testLog string
-		code    int
+		args   []string
+		stdout string
+		stderr string
+		code   int
 	}{
 		{
 			args:   []string{"bar", "foo", "arg"},
@@ -514,22 +525,21 @@ func (s *SuperCommandSuite) TestRegisterSuperAlias(c *gc.C) {
 			args:   []string{"bar-foo", "arg"},
 			stdout: "foo arg\n",
 		}, {
-			args:    []string{"bar-dep", "arg"},
-			stdout:  "foo arg\n",
-			testLog: `(?s).*"bar-dep" is deprecated, please use "bar foo".*`,
+			args:   []string{"bar-dep", "arg"},
+			stdout: "foo arg\n",
+			stderr: "WARNING \"bar-dep\" is deprecated, please use \"bar foo\"\n",
 		}, {
-			args:    []string{"bar-ob", "arg"},
-			testLog: "(?s).*unrecognized command: jujutest bar-ob.*",
-			code:    2,
+			args:   []string{"bar-ob", "arg"},
+			stderr: "ERROR unrecognized command: jujutest bar-ob\n",
+			code:   2,
 		},
 	} {
-		ctx := cmdtesting.Context(c)
-		code := cmd.Main(jc, ctx, test.args)
+		s.SetUpTest(c)
+		code := cmd.Main(jc, s.ctx, test.args)
 		c.Check(code, gc.Equals, test.code)
-		c.Check(cmdtesting.Stdout(ctx), gc.Equals, test.stdout)
-		if test.testLog != "" {
-			c.Check(c.GetTestLog(), gc.Matches, test.testLog)
-		}
+		c.Check(cmdtesting.Stdout(s.ctx), gc.Equals, test.stdout)
+		c.Check(cmdtesting.Stderr(s.ctx), gc.Equals, test.stderr)
+		s.TearDownTest(c)
 	}
 }
 
@@ -560,10 +570,10 @@ func (s *SuperCommandSuite) TestRegisterDeprecated(c *gc.C) {
 	c.Assert(badCall, gc.PanicMatches, `command already registered: "test-dep"`)
 
 	for _, test := range []struct {
-		args    []string
-		stdout  string
-		testLog string
-		code    int
+		args   []string
+		stdout string
+		stderr string
+		code   int
 	}{
 		{
 			args:   []string{"test-non-dep", "arg"},
@@ -572,30 +582,29 @@ func (s *SuperCommandSuite) TestRegisterDeprecated(c *gc.C) {
 			args:   []string{"test-non-dep-alias", "arg"},
 			stdout: "test-non-dep arg\n",
 		}, {
-			args:    []string{"test-dep", "arg"},
-			stdout:  "test-dep arg\n",
-			testLog: `(?s).*"test-dep" is deprecated, please use "test-dep-new".*`,
+			args:   []string{"test-dep", "arg"},
+			stdout: "test-dep arg\n",
+			stderr: "WARNING \"test-dep\" is deprecated, please use \"test-dep-new\"\n",
 		}, {
-			args:    []string{"test-dep-alias", "arg"},
-			stdout:  "test-dep arg\n",
-			testLog: `(?s).*"test-dep-alias" is deprecated, please use "test-dep-new".*`,
+			args:   []string{"test-dep-alias", "arg"},
+			stdout: "test-dep arg\n",
+			stderr: "WARNING \"test-dep-alias\" is deprecated, please use \"test-dep-new\"\n",
 		}, {
-			args:    []string{"test-ob", "arg"},
-			testLog: `(?s).*unrecognized command: jujutest test-ob.*`,
-			code:    2,
+			args:   []string{"test-ob", "arg"},
+			stderr: "ERROR unrecognized command: jujutest test-ob\n",
+			code:   2,
 		}, {
-			args:    []string{"test-ob-alias", "arg"},
-			testLog: `(?s).*unrecognized command: jujutest test-ob-alias.*`,
-			code:    2,
+			args:   []string{"test-ob-alias", "arg"},
+			stderr: "ERROR unrecognized command: jujutest test-ob-alias\n",
+			code:   2,
 		},
 	} {
-		ctx := cmdtesting.Context(c)
-		code := cmd.Main(jc, ctx, test.args)
+		s.SetUpTest(c)
+		code := cmd.Main(jc, s.ctx, test.args)
 		c.Check(code, gc.Equals, test.code)
-		c.Check(cmdtesting.Stdout(ctx), gc.Equals, test.stdout)
-		if test.testLog != "" {
-			c.Check(c.GetTestLog(), gc.Matches, test.testLog)
-		}
+		c.Check(cmdtesting.Stderr(s.ctx), gc.Equals, test.stderr)
+		c.Check(cmdtesting.Stdout(s.ctx), gc.Equals, test.stdout)
+		s.TearDownTest(c)
 	}
 }
 
@@ -610,15 +619,14 @@ func (s *SuperCommandSuite) TestGlobalFlagsBeforeCommand(c *gc.C) {
 		Log: &cmd.Log{},
 	})
 	sc.Register(&TestCommand{Name: "blah"})
-	ctx := cmdtesting.Context(c)
-	code := cmd.Main(sc, ctx, []string{
+	code := cmd.Main(sc, s.ctx, []string{
 		"--testflag=something",
 		"blah",
 		"--option=testoption",
 	})
 	c.Assert(code, gc.Equals, 0)
 	c.Assert(flag, gc.Equals, "something")
-	c.Check(cmdtesting.Stdout(ctx), gc.Equals, "testoption\n")
+	c.Check(cmdtesting.Stdout(s.ctx), gc.Equals, "testoption\n")
 }
 
 func (s *SuperCommandSuite) TestGlobalFlagsAfterCommand(c *gc.C) {
@@ -632,15 +640,14 @@ func (s *SuperCommandSuite) TestGlobalFlagsAfterCommand(c *gc.C) {
 		Log: &cmd.Log{},
 	})
 	sc.Register(&TestCommand{Name: "blah"})
-	ctx := cmdtesting.Context(c)
-	code := cmd.Main(sc, ctx, []string{
+	code := cmd.Main(sc, s.ctx, []string{
 		"blah",
 		"--option=testoption",
 		"--testflag=something",
 	})
 	c.Assert(code, gc.Equals, 0)
 	c.Assert(flag, gc.Equals, "something")
-	c.Check(cmdtesting.Stdout(ctx), gc.Equals, "testoption\n")
+	c.Check(cmdtesting.Stdout(s.ctx), gc.Equals, "testoption\n")
 }
 
 func (s *SuperCommandSuite) TestSuperSetFlags(c *gc.C) {
@@ -664,15 +671,14 @@ func (s *SuperCommandSuite) TestSuperSetFlagsDefault(c *gc.C) {
 
 func (s *SuperCommandSuite) assertFlagsAlias(c *gc.C, sc *cmd.SuperCommand, expectedAlias string) {
 	sc.Register(&TestCommand{Name: "blah"})
-	ctx := cmdtesting.Context(c)
-	code := cmd.Main(sc, ctx, []string{
+	code := cmd.Main(sc, s.ctx, []string{
 		"blah",
 		"--fluffs",
 	})
 	c.Assert(code, gc.Equals, 2)
-	c.Check(ctx.IsSerial(), gc.Equals, false)
-	c.Check(cmdtesting.Stdout(ctx), gc.Equals, "")
-	c.Check(c.GetTestLog(), gc.Matches, fmt.Sprintf("(?s).*%v provided but not defined: --fluffs.*", expectedAlias))
+	c.Check(s.ctx.IsSerial(), gc.Equals, false)
+	c.Check(cmdtesting.Stdout(s.ctx), gc.Equals, "")
+	c.Check(cmdtesting.Stderr(s.ctx), gc.Equals, fmt.Sprintf("ERROR %v provided but not defined: --fluffs\n", expectedAlias))
 }
 
 func (s *SuperCommandSuite) TestErrInJson(c *gc.C) {
@@ -723,33 +729,31 @@ func (s *SuperCommandSuite) TestErrInJsonWithOutput(c *gc.C) {
 		},
 	}
 	sc.Register(testCmd)
-	ctx := cmdtesting.Context(c)
-	code := cmd.Main(sc, ctx, []string{
+	code := cmd.Main(sc, s.ctx, []string{
 		"blah",
 		"--format=json",
 		"--option=error",
 	})
 	c.Assert(code, gc.Equals, 1)
-	c.Check(ctx.IsSerial(), gc.Equals, true)
-	c.Check(cmdtesting.Stderr(ctx), gc.Matches, "ERROR BAM!\n")
-	c.Check(cmdtesting.Stdout(ctx), gc.Equals, "{\"name\":\"test\"}\n")
+	c.Check(s.ctx.IsSerial(), gc.Equals, true)
+	c.Check(cmdtesting.Stderr(s.ctx), gc.Matches, "ERROR BAM!\n")
+	c.Check(cmdtesting.Stdout(s.ctx), gc.Equals, "{\"name\":\"test\"}\n")
 }
 
 func (s *SuperCommandSuite) assertFormattingErr(c *gc.C, sc *cmd.SuperCommand, format string) {
 	// This command will throw an error during the run
 	testCmd := &TestCommand{Name: "blah", Option: "error"}
 	sc.Register(testCmd)
-	ctx := cmdtesting.Context(c)
 	formatting := fmt.Sprintf("--format=%v", format)
-	code := cmd.Main(sc, ctx, []string{
+	code := cmd.Main(sc, s.ctx, []string{
 		"blah",
 		formatting,
 		"--option=error",
 	})
 	c.Assert(code, gc.Equals, 1)
-	c.Check(ctx.IsSerial(), gc.Equals, true)
-	c.Check(cmdtesting.Stderr(ctx), gc.Matches, "ERROR BAM!\n")
-	c.Check(cmdtesting.Stdout(ctx), gc.Equals, "{}\n")
+	c.Check(s.ctx.IsSerial(), gc.Equals, true)
+	c.Check(cmdtesting.Stderr(s.ctx), gc.Matches, "ERROR BAM!\n")
+	c.Check(cmdtesting.Stdout(s.ctx), gc.Equals, "{}\n")
 }
 
 type flagAdderFunc func(*gnuflag.FlagSet)
