@@ -32,7 +32,7 @@ func (c *documentationCommand) Info() *Info {
 	return &Info{
 		Name:    "documentation",
 		Args:    "--out <target-file> --noindex",
-		Purpose: "Generate the documentation for current commands",
+		Purpose: "Generate the documentation for all commands",
 		Doc:     doc,
 	}
 }
