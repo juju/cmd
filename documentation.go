@@ -40,7 +40,7 @@ func (c *documentationCommand) Info() *Info {
 // SetFlags adds command specific flags to the flag set.
 func (c *documentationCommand) SetFlags(f *gnuflag.FlagSet) {
 	f.StringVar(&c.out, "out", "", "Documentation output file")
-	f.BoolVar(&c.noIndex, "noindex", false, "Do not generate the commands index")
+	f.BoolVar(&c.noIndex, "no-index", false, "Do not generate the commands index")
 }
 
 func (c *documentationCommand) Run(ctx *Context) error {
