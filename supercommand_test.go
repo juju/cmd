@@ -190,7 +190,15 @@ func (c *testVersionFlagCommand) Run(_ *cmd.Context) error {
 	return nil
 }
 
+func (s *SuperCommandSuite) TestVersionVerb(c *gc.C) {
+	s.testVersion(c, []string{"version"})
+}
+
 func (s *SuperCommandSuite) TestVersionFlag(c *gc.C) {
+	s.testVersion(c, []string{"--version"})
+}
+
+func (s *SuperCommandSuite) testVersion(c *gc.C, params []string) {
 	jc := cmd.NewSuperCommand(cmd.SuperCommandParams{
 		Name:    "jujutest",
 		Purpose: "to be purposeful",
@@ -200,61 +208,66 @@ func (s *SuperCommandSuite) TestVersionFlag(c *gc.C) {
 	testVersionFlagCommand := &testVersionFlagCommand{}
 	jc.Register(testVersionFlagCommand)
 
-	// baseline: juju version
-	code := cmd.Main(jc, s.ctx, []string{"version"})
+	code := cmd.Main(jc, s.ctx, params)
 	c.Check(code, gc.Equals, 0)
-	baselineStderr := cmdtesting.Stderr(s.ctx)
-	baselineStdout := cmdtesting.Stdout(s.ctx)
+	c.Assert(cmdtesting.Stderr(s.ctx), gc.Equals, "")
+	c.Assert(cmdtesting.Stdout(s.ctx), gc.Equals, "111.222.333\n")
+}
 
-	s.TearDownTest(c)
-	s.SetUpTest(c)
-
-	// juju --version output should match that of juju version.
-	code = cmd.Main(jc, s.ctx, []string{"--version"})
-	c.Check(code, gc.Equals, 0)
-	c.Assert(cmdtesting.Stderr(s.ctx), gc.Equals, baselineStderr)
-	c.Assert(cmdtesting.Stdout(s.ctx), gc.Equals, baselineStdout)
-
-	s.TearDownTest(c)
-	s.SetUpTest(c)
+func (s *SuperCommandSuite) TestVersionFlagSpecific(c *gc.C) {
+	jc := cmd.NewSuperCommand(cmd.SuperCommandParams{
+		Name:    "jujutest",
+		Purpose: "to be purposeful",
+		Doc:     "doc\nblah\ndoc",
+		Version: "111.222.333",
+	})
+	testVersionFlagCommand := &testVersionFlagCommand{}
+	jc.Register(testVersionFlagCommand)
 
 	// juju test --version should update testVersionFlagCommand.version,
 	// and there should be no output. The --version flag on the 'test'
 	// subcommand has a different type to the "juju --version" flag.
-	code = cmd.Main(jc, s.ctx, []string{"test", "--version=abc.123"})
+	code := cmd.Main(jc, s.ctx, []string{"test", "--version=abc.123"})
 	c.Check(code, gc.Equals, 0)
 	c.Assert(cmdtesting.Stderr(s.ctx), gc.Equals, "")
 	c.Assert(cmdtesting.Stdout(s.ctx), gc.Equals, "")
 	c.Assert(testVersionFlagCommand.version, gc.Equals, "abc.123")
 }
 
-func (s *SuperCommandSuite) TestVersionNotProvided(c *gc.C) {
+func (s *SuperCommandSuite) TestVersionNotProvidedVerb(c *gc.C) {
 	jc := cmd.NewSuperCommand(cmd.SuperCommandParams{
 		Name:    "jujutest",
 		Purpose: "to be purposeful",
 		Doc:     "doc\nblah\ndoc",
 	})
-
 	// juju version
-	baselineCode := cmd.Main(jc, s.ctx, []string{"version"})
-	c.Check(baselineCode, gc.Not(gc.Equals), 0)
+	code := cmd.Main(jc, s.ctx, []string{"version"})
+	c.Check(code, gc.Not(gc.Equals), 0)
 	c.Assert(cmdtesting.Stderr(s.ctx), gc.Equals, "ERROR unrecognized command: jujutest version\n")
+}
 
-	s.TearDownTest(c)
-	s.SetUpTest(c)
-
+func (s *SuperCommandSuite) TestVersionNotProvidedFlag(c *gc.C) {
+	jc := cmd.NewSuperCommand(cmd.SuperCommandParams{
+		Name:    "jujutest",
+		Purpose: "to be purposeful",
+		Doc:     "doc\nblah\ndoc",
+	})
 	// juju --version
 	code := cmd.Main(jc, s.ctx, []string{"--version"})
-	c.Check(code, gc.Equals, baselineCode)
+	c.Check(code, gc.Not(gc.Equals), 0)
 	c.Assert(cmdtesting.Stderr(s.ctx), gc.Equals, "ERROR flag provided but not defined: --version\n")
+}
 
-	s.TearDownTest(c)
-	s.SetUpTest(c)
-
-	// juju -version where flags are known as options
+func (s *SuperCommandSuite) TestVersionNotProvidedOption(c *gc.C) {
+	jc := cmd.NewSuperCommand(cmd.SuperCommandParams{
+		Name:    "jujutest",
+		Purpose: "to be purposeful",
+		Doc:     "doc\nblah\ndoc",
+	})
+	// juju --version where flags are known as options
 	jc.FlagKnownAs = "option"
-	code = cmd.Main(jc, s.ctx, []string{"--version"})
-	c.Check(code, gc.Equals, baselineCode)
+	code := cmd.Main(jc, s.ctx, []string{"--version"})
+	c.Check(code, gc.Not(gc.Equals), 0)
 	c.Assert(cmdtesting.Stderr(s.ctx), gc.Equals, "ERROR option provided but not defined: --version\n")
 }
 
