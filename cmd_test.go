@@ -24,6 +24,7 @@ import (
 
 var _ = gc.Suite(&CmdSuite{})
 var _ = gc.Suite(&CmdHelpSuite{})
+var _ = gc.Suite(&CmdDocumentationSuite{})
 
 type CmdSuite struct {
 	testing.LoggingCleanupSuite
@@ -383,4 +384,10 @@ Command Flags:
 Details:
 command details
 `[1:])
+}
+
+type CmdDocumentationSuite struct {
+	testing.LoggingCleanupSuite
+
+	targetCmd cmd.Command
 }

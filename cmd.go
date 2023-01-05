@@ -284,6 +284,12 @@ type Info struct {
 	// Doc is the long documentation for the Command.
 	Doc string
 
+	// Examples is a collection of running examples.
+	Examples []string
+
+	// SeeAlso is a collection of additional commands to be checked.
+	SeeAlso []string
+
 	// Aliases are other names for the Command.
 	Aliases []string
 

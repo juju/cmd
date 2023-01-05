@@ -49,8 +49,9 @@ type SuperCommandSuite struct {
 
 var _ = gc.Suite(&SuperCommandSuite{})
 
+const docText = "\n    documentation\\s+- Generate the documentation for all commands"
 const helpText = "\n    help\\s+- Show help on a command or other topic."
-const helpCommandsText = "commands:" + helpText
+const helpCommandsText = "commands:" + docText + helpText
 
 func (s *SuperCommandSuite) SetUpTest(c *gc.C) {
 	s.IsolationSuite.SetUpTest(c)
@@ -70,7 +71,7 @@ func (s *SuperCommandSuite) TestDispatch(c *gc.C) {
 	info = jc.Info()
 	c.Assert(info.Name, gc.Equals, "jujutest")
 	c.Assert(info.Args, gc.Equals, "<command> ...")
-	c.Assert(info.Doc, gc.Matches, "commands:\n    defenestrate - defenestrate the juju"+helpText)
+	c.Assert(info.Doc, gc.Matches, "commands:\n    defenestrate  - defenestrate the juju"+docText+helpText)
 
 	jc, tc, err := initDefenestrate([]string{"defenestrate"})
 	c.Assert(err, gc.IsNil)
@@ -140,16 +141,18 @@ func (s *SuperCommandSuite) TestAliasesRegistered(c *gc.C) {
 
 	info := jc.Info()
 	c.Assert(info.Doc, gc.Equals, `commands:
-    flap - Alias for 'flip'.
-    flip - flip the juju
-    flop - Alias for 'flip'.
-    help - Show help on a command or other topic.`)
+    documentation - Generate the documentation for all commands
+    flap          - Alias for 'flip'.
+    flip          - flip the juju
+    flop          - Alias for 'flip'.
+    help          - Show help on a command or other topic.`)
 }
 
 func (s *SuperCommandSuite) TestInfo(c *gc.C) {
 	commandsDoc := `commands:
-    flapbabble - flapbabble the juju
-    flip       - flip the juju`
+    documentation - Generate the documentation for all commands
+    flapbabble    - flapbabble the juju
+    flip          - flip the juju`
 
 	jc := cmd.NewSuperCommand(cmd.SuperCommandParams{
 		Name:    "jujutest",
@@ -455,9 +458,10 @@ func (s *SuperCommandSuite) TestRegisterAlias(c *gc.C) {
 	info := jc.Info()
 	// NOTE: deprecated `bar` not shown in commands.
 	c.Assert(info.Doc, gc.Equals, `commands:
-    foo  - Alias for 'test'.
-    help - Show help on a command or other topic.
-    test - to be simple`)
+    documentation - Generate the documentation for all commands
+    foo           - Alias for 'test'.
+    help          - Show help on a command or other topic.
+    test          - to be simple`)
 
 	for _, test := range []struct {
 		name   string
@@ -520,10 +524,11 @@ func (s *SuperCommandSuite) TestRegisterSuperAlias(c *gc.C) {
 	info := jc.Info()
 	// NOTE: deprecated `bar` not shown in commands.
 	c.Assert(info.Doc, gc.Equals, `commands:
-    bar     - bar functions
-    bar-foo - Alias for 'bar foo'.
-    help    - Show help on a command or other topic.
-    test    - to be simple`)
+    bar           - bar functions
+    bar-foo       - Alias for 'bar foo'.
+    documentation - Generate the documentation for all commands
+    help          - Show help on a command or other topic.
+    test          - to be simple`)
 
 	for _, test := range []struct {
 		args   []string
