@@ -91,7 +91,7 @@ func (log *Log) Start(ctx *Context) error {
 			return err
 		}
 	} else {
-		loggo.RemoveWriter("default")
+		_, _ = loggo.RemoveWriter("default")
 		// Create a simple writer that doesn't show filenames, or timestamps,
 		// and only shows warning or above.
 		writer := NewWarningWriter(ctx.Stderr)
@@ -145,7 +145,7 @@ func NewWarningWriter(writer io.Writer) loggo.Writer {
 }
 
 // Write implements Writer.
-//   WARNING The message...
+// WARNING The message...
 func (w *warningWriter) Write(entry loggo.Entry) {
 	loggocolor.SeverityColor[entry.Level].Fprintf(w.writer, entry.Level.String())
 	fmt.Fprintf(w.writer, " %s\n", entry.Message)

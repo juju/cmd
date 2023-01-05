@@ -44,11 +44,12 @@ func (s *LogSuite) TestNoFlags(c *gc.C) {
 }
 
 func (s *LogSuite) TestFlags(c *gc.C) {
-	log := newLogWithFlags(c, "", "--log-file", "foo", "--verbose", "--debug",
+	log := newLogWithFlags(c, "", "--log-file", "foo", "--verbose", "--debug", "--show-log",
 		"--logging-config=juju.cmd=INFO;juju.worker.deployer=DEBUG")
 	c.Assert(log.Path, gc.Equals, "foo")
 	c.Assert(log.Verbose, gc.Equals, true)
 	c.Assert(log.Debug, gc.Equals, true)
+	c.Assert(log.ShowLog, gc.Equals, true)
 	c.Assert(log.Config, gc.Equals, "juju.cmd=INFO;juju.worker.deployer=DEBUG")
 }
 

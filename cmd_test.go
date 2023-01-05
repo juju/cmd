@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/juju/loggo"
 	jc "github.com/juju/testing/checkers"
 	gc "gopkg.in/check.v1"
 
@@ -26,42 +27,46 @@ var _ = gc.Suite(&CmdHelpSuite{})
 
 type CmdSuite struct {
 	testing.LoggingCleanupSuite
+
+	ctx *cmd.Context
+}
+
+func (s *CmdSuite) SetUpTest(c *gc.C) {
+	s.LoggingCleanupSuite.SetUpTest(c)
+	s.ctx = cmdtesting.Context(c)
+	loggo.ReplaceDefaultWriter(cmd.NewWarningWriter(s.ctx.Stderr))
 }
 
 func (s *CmdSuite) TestContext(c *gc.C) {
-	ctx := cmdtesting.Context(c)
-	c.Check(ctx.Context, jc.DeepEquals, context.Background())
-	c.Check(ctx.AbsPath("/foo/bar"), gc.Equals, "/foo/bar")
-	c.Check(ctx.AbsPath("/foo/../bar"), gc.Equals, "/bar")
-	c.Check(ctx.AbsPath("foo/bar"), gc.Equals, filepath.Join(ctx.Dir, "foo/bar"))
+	c.Check(s.ctx.Context, jc.DeepEquals, context.Background())
+	c.Check(s.ctx.AbsPath("/foo/bar"), gc.Equals, "/foo/bar")
+	c.Check(s.ctx.AbsPath("/foo/../bar"), gc.Equals, "/bar")
+	c.Check(s.ctx.AbsPath("foo/bar"), gc.Equals, filepath.Join(s.ctx.Dir, "foo/bar"))
 	homeDir := os.Getenv("HOME")
-	c.Check(ctx.AbsPath("~/foo/bar"), gc.Equals, filepath.Join(homeDir, "foo/bar"))
+	c.Check(s.ctx.AbsPath("~/foo/bar"), gc.Equals, filepath.Join(homeDir, "foo/bar"))
 }
 
 func (s *CmdSuite) TestWith(c *gc.C) {
-	ctx := cmdtesting.Context(c)
 	cancelCtx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	ctx = ctx.With(cancelCtx)
+	ctx := s.ctx.With(cancelCtx)
 	c.Assert(ctx.Context, jc.DeepEquals, cancelCtx)
 }
 
 func (s *CmdSuite) TestContextGetenv(c *gc.C) {
-	ctx := cmdtesting.Context(c)
-	ctx.Env = make(map[string]string)
-	before := ctx.Getenv("foo")
-	ctx.Env["foo"] = "bar"
-	after := ctx.Getenv("foo")
+	s.ctx.Env = make(map[string]string)
+	before := s.ctx.Getenv("foo")
+	s.ctx.Env["foo"] = "bar"
+	after := s.ctx.Getenv("foo")
 
 	c.Check(before, gc.Equals, "")
 	c.Check(after, gc.Equals, "bar")
 }
 
 func (s *CmdSuite) TestContextSetenv(c *gc.C) {
-	ctx := cmdtesting.Context(c)
-	before := ctx.Env["foo"]
-	ctx.Setenv("foo", "bar")
-	after := ctx.Env["foo"]
+	before := s.ctx.Env["foo"]
+	s.ctx.Setenv("foo", "bar")
+	after := s.ctx.Env["foo"]
 
 	c.Check(before, gc.Equals, "")
 	c.Check(after, gc.Equals, "bar")
@@ -86,86 +91,92 @@ func (s *CmdSuite) TestInfo(c *gc.C) {
 	c.Assert(string(help), gc.Equals, optionHelp)
 }
 
-func (s *CmdSuite) TestMainInitError(c *gc.C) {
-	s.assertOptionError(c,
-		&TestCommand{Name: "verb"},
-		".*flag provided but not defined: --unknown\n")
+var initErrorTests = []struct {
+	c    *TestCommand
+	help string
+}{
+	{&TestCommand{Name: "verb"}, fmt.Sprintf(fullHelp, "flag", strings.Title("flag"))},
+	{&TestCommand{Name: "verb", Minimal: true}, minimalHelp},
 }
 
-func (s *CmdSuite) TestMainInitErrorMinimal(c *gc.C) {
-	s.assertOptionError(c,
-		&TestCommand{Name: "verb", Minimal: true},
-		".*flag provided but not defined: --unknown\n")
+func (s *CmdSuite) TestMainInitError(c *gc.C) {
+	expected := "ERROR flag provided but not defined: --unknown\n"
+	for _, t := range initErrorTests {
+		s.SetUpTest(c)
+		s.assertOptionError(c, t.c, expected)
+		s.TearDownTest(c)
+	}
+}
+
+func (s *CmdSuite) assertOptionError(c *gc.C, command *TestCommand, expected string) {
+	result := cmd.Main(command, s.ctx, []string{"--unknown"})
+	c.Assert(result, gc.Equals, 2)
+	c.Assert(bufferString(s.ctx.Stdout), gc.Equals, "")
+	c.Assert(bufferString(s.ctx.Stderr), gc.Equals, expected)
 }
 
 func (s *CmdSuite) TestMainFlagsAKA(c *gc.C) {
 	s.assertOptionError(c,
 		&TestCommand{Name: "verb", FlagAKA: "option"},
-		".*option provided but not defined: --unknown\n")
-}
-
-func (s *CmdSuite) assertOptionError(c *gc.C, command *TestCommand, expected string) {
-	ctx := cmdtesting.Context(c)
-	result := cmd.Main(command, ctx, []string{"--unknown"})
-	c.Assert(result, gc.Equals, 2)
-	c.Assert(bufferString(ctx.Stdout), gc.Equals, "")
-	c.Assert(c.GetTestLog(), gc.Matches, expected)
+		"ERROR option provided but not defined: --unknown\n")
 }
 
 func (s *CmdSuite) TestMainRunError(c *gc.C) {
-	ctx := cmdtesting.Context(c)
-	result := cmd.Main(&TestCommand{Name: "verb"}, ctx, []string{"--option", "error"})
+	result := cmd.Main(&TestCommand{Name: "verb"}, s.ctx, []string{"--option", "error"})
 	c.Assert(result, gc.Equals, 1)
-	c.Assert(bufferString(ctx.Stdout), gc.Equals, "")
-	c.Assert(c.GetTestLog(), gc.Matches, `(?s).*BAM!.*`)
+	c.Assert(bufferString(s.ctx.Stdout), gc.Equals, "")
+	c.Assert(bufferString(s.ctx.Stderr), gc.Equals, "ERROR BAM!\n")
 }
 
 func (s *CmdSuite) TestMainRunSilentError(c *gc.C) {
-	ctx := cmdtesting.Context(c)
-	result := cmd.Main(&TestCommand{Name: "verb"}, ctx, []string{"--option", "silent-error"})
+	result := cmd.Main(&TestCommand{Name: "verb"}, s.ctx, []string{"--option", "silent-error"})
 	c.Assert(result, gc.Equals, 1)
-	c.Assert(bufferString(ctx.Stdout), gc.Equals, "")
+	c.Assert(bufferString(s.ctx.Stdout), gc.Equals, "")
+	c.Assert(bufferString(s.ctx.Stderr), gc.Equals, "")
 }
 
 func (s *CmdSuite) TestMainSuccess(c *gc.C) {
-	ctx := cmdtesting.Context(c)
-	result := cmd.Main(&TestCommand{Name: "verb"}, ctx, []string{"--option", "success!"})
+	result := cmd.Main(&TestCommand{Name: "verb"}, s.ctx, []string{"--option", "success!"})
 	c.Assert(result, gc.Equals, 0)
-	c.Assert(bufferString(ctx.Stdout), gc.Equals, "success!\n")
+	c.Assert(bufferString(s.ctx.Stdout), gc.Equals, "success!\n")
+	c.Assert(bufferString(s.ctx.Stderr), gc.Equals, "")
 }
 
 func (s *CmdSuite) TestStdin(c *gc.C) {
 	const phrase = "Do you, Juju?"
-	ctx := cmdtesting.Context(c)
-	ctx.Stdin = bytes.NewBuffer([]byte(phrase))
-	result := cmd.Main(&TestCommand{Name: "verb"}, ctx, []string{"--option", "echo"})
+	s.ctx.Stdin = bytes.NewBuffer([]byte(phrase))
+	result := cmd.Main(&TestCommand{Name: "verb"}, s.ctx, []string{"--option", "echo"})
 	c.Assert(result, gc.Equals, 0)
-	c.Assert(bufferString(ctx.Stdout), gc.Equals, phrase)
+	c.Assert(bufferString(s.ctx.Stdout), gc.Equals, phrase)
+	c.Assert(bufferString(s.ctx.Stderr), gc.Equals, "")
 }
 
 func (s *CmdSuite) TestMainHelp(c *gc.C) {
 	for _, arg := range []string{"-h", "--help"} {
-		ctx := cmdtesting.Context(c)
-		result := cmd.Main(&TestCommand{Name: "verb"}, ctx, []string{arg})
+		s.SetUpTest(c)
+		result := cmd.Main(&TestCommand{Name: "verb"}, s.ctx, []string{arg})
 		c.Assert(result, gc.Equals, 0)
-		c.Assert(bufferString(ctx.Stdout), gc.Equals, fmt.Sprintf(fullHelp, "flag", "Flag"))
+		c.Assert(bufferString(s.ctx.Stdout), gc.Equals, fmt.Sprintf(fullHelp, "flag", "Flag"))
+		c.Assert(bufferString(s.ctx.Stderr), gc.Equals, "")
+		s.TearDownTest(c)
 	}
 }
 
 func (s *CmdSuite) TestMainHelpFlagsAKA(c *gc.C) {
 	for _, arg := range []string{"-h", "--help"} {
-		ctx := cmdtesting.Context(c)
-		result := cmd.Main(&TestCommand{Name: "verb", FlagAKA: "option"}, ctx, []string{arg})
+		s.SetUpTest(c)
+		result := cmd.Main(&TestCommand{Name: "verb", FlagAKA: "option"}, s.ctx, []string{arg})
 		c.Assert(result, gc.Equals, 0)
-		c.Assert(bufferString(ctx.Stdout), gc.Equals, fmt.Sprintf(fullHelp, "option", "Option"))
+		c.Assert(bufferString(s.ctx.Stdout), gc.Equals, fmt.Sprintf(fullHelp, "option", "Option"))
+		c.Assert(bufferString(s.ctx.Stderr), gc.Equals, "")
+		s.TearDownTest(c)
 	}
 }
 
 func (s *CmdSuite) TestDefaultContextReturnsErrorInDeletedDirectory(c *gc.C) {
-	ctx := cmdtesting.Context(c)
 	wd, err := os.Getwd()
 	c.Assert(err, gc.IsNil)
-	missing := ctx.Dir + "/missing"
+	missing := s.ctx.Dir + "/missing"
 	err = os.Mkdir(missing, 0700)
 	c.Assert(err, gc.IsNil)
 	err = os.Chdir(missing)
@@ -173,7 +184,7 @@ func (s *CmdSuite) TestDefaultContextReturnsErrorInDeletedDirectory(c *gc.C) {
 	defer os.Chdir(wd)
 	err = os.Remove(missing)
 	c.Assert(err, gc.IsNil)
-	ctx, err = cmd.DefaultContext()
+	ctx, err := cmd.DefaultContext()
 	c.Assert(err, gc.ErrorMatches, `getwd: no such file or directory`)
 	c.Assert(ctx, gc.IsNil)
 }
