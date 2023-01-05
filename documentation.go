@@ -125,7 +125,25 @@ func (c *documentationCommand) formatCommand(ref commandReference) string {
 	// Description
 	doc := ref.command.Info().Doc
 	if doc != "" {
-		formatted += "## Description\n" + ref.command.Info().Doc + "\n"
+		formatted += "## Description\n" + ref.command.Info().Doc + "\n\n"
+	}
+
+	// Examples
+	if len(ref.command.Info().Examples) > 0 {
+		formatted += "## Examples\n"
+		for _, e := range ref.command.Info().Examples {
+			formatted += "`" + e + "`\n"
+		}
+		formatted += "\n"
+	}
+
+	// See Also
+	if len(ref.command.Info().SeeAlso) > 0 {
+		formatted += "## See Also\n"
+		for _, s := range ref.command.Info().SeeAlso {
+			formatted += fmt.Sprintf("[%s](#%s)\n", s, s)
+		}
+		formatted += "\n"
 	}
 
 	formatted += "---\n"
