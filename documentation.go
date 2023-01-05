@@ -60,6 +60,7 @@ func (c *documentationCommand) Run(ctx *Context) error {
 
 func (c *documentationCommand) dumpEntries(writer *bufio.Writer) error {
 	if len(c.super.subcmds) == 0 {
+		fmt.Printf("No commands found for %s", c.super.Name)
 		return nil
 	}
 
@@ -157,13 +158,14 @@ func (c *documentationCommand) formatCommand(ref commandReference) string {
 // to permit additional formatting without modifying the
 // gnuflag package.
 func (d *documentationCommand) formatFlags(c Command) string {
-	flagsAKA := FlagAlias(c, "")
-	if flagsAKA == "" {
+	flagsAlias := FlagAlias(c, "")
+	if flagsAlias == "" {
 		// For backward compatibility, the default is 'flag'.
-		flagsAKA = "flag"
+		flagsAlias = "flag"
 	}
-	f := gnuflag.NewFlagSetWithFlagKnownAs(c.Info().Name, gnuflag.ContinueOnError, flagsAKA)
+	f := gnuflag.NewFlagSetWithFlagKnownAs(c.Info().Name, gnuflag.ContinueOnError, flagsAlias)
 	c.SetFlags(f)
+
 	// group together all flags for a given value
 	flags := make(map[interface{}]flagsByLength)
 	f.VisitAll(func(f *gnuflag.Flag) {
