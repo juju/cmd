@@ -89,7 +89,7 @@ func RunCommandInDir(c *gc.C, com cmd.Command, args []string, dir string) (*cmd.
 
 func runCommand(ctx *cmd.Context, com cmd.Command, args []string) (*cmd.Context, error) {
 	if err := InitCommand(com, args); err != nil {
-		ctx.Errorf("%s", err)
+		cmd.WriteError(ctx.Stderr, err)
 		return ctx, err
 	}
 	return ctx, com.Run(ctx)

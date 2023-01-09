@@ -283,7 +283,7 @@ func (s *SuperCommandSuite) TestLogging(c *gc.C) {
 	sc.Register(&TestCommand{Name: "blah"})
 	code := cmd.Main(sc, s.ctx, []string{"blah", "--option", "error", "--debug"})
 	c.Assert(code, gc.Equals, 1)
-	c.Assert(cmdtesting.Stderr(s.ctx), gc.Matches, `(?m).* ERROR .* BAM!\n.* DEBUG .* error stack: \n.*`)
+	c.Assert(cmdtesting.Stderr(s.ctx), gc.Matches, `(?m)ERROR BAM!\n.* DEBUG .* error stack: \n.*`)
 }
 
 type notifyTest struct {

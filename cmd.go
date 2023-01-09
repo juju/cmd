@@ -388,7 +388,7 @@ func handleCommandError(c Command, ctx *Context, err error, f *gnuflag.FlagSet) 
 	case ErrSilent:
 		return 2, true
 	default:
-		ctx.Errorf("%s", err)
+		WriteError(ctx.Stderr, err)
 		return 2, true
 	}
 }
@@ -421,7 +421,7 @@ func Main(c Command, ctx *Context, args []string) int {
 			return err.(*RcPassthroughError).Code
 		}
 		if err != ErrSilent {
-			ctx.Errorf("%s", err)
+			WriteError(ctx.Stderr, err)
 		}
 		return 1
 	}
