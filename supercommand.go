@@ -544,7 +544,7 @@ func (c *SuperCommand) Run(ctx *Context) error {
 			return handleErr
 		}
 
-		ctx.Errorf("%s", err)
+		WriteError(ctx.Stderr, err)
 		logger.Debugf("error stack: \n%v", errors.ErrorStack(err))
 
 		// Err has been logged above, we can make the err silent so it does not log again in cmd/main
