@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-// ParseAliasFile will read the specified file and convert
+//  ParseAliasFile will read the specified file and convert
 // the content to a map of names to the command line arguments
 // they relate to.  The function will always return a valid map, even
 // if it is empty.

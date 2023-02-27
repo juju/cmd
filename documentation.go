@@ -5,12 +5,18 @@ package cmd
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"os"
 	"sort"
 	"strings"
 
 	"github.com/juju/gnuflag"
+)
+
+const (
+	DocumentationFileName      = "documentation.md"
+	DocumentationIndexFileName = "index.md"
 )
 
 var doc string = `
@@ -22,6 +28,7 @@ type documentationCommand struct {
 	super   *SuperCommand
 	out     string
 	noIndex bool
+	split   bool
 }
 
 func newDocumentationCommand(s *SuperCommand) *documentationCommand {
@@ -31,7 +38,7 @@ func newDocumentationCommand(s *SuperCommand) *documentationCommand {
 func (c *documentationCommand) Info() *Info {
 	return &Info{
 		Name:    "documentation",
-		Args:    "--out <target-file> --noindex",
+		Args:    "--out <target-folder> --noindex --split",
 		Purpose: "Generate the documentation for all commands",
 		Doc:     doc,
 	}
@@ -39,14 +46,33 @@ func (c *documentationCommand) Info() *Info {
 
 // SetFlags adds command specific flags to the flag set.
 func (c *documentationCommand) SetFlags(f *gnuflag.FlagSet) {
-	f.StringVar(&c.out, "out", "", "Documentation output file")
+	f.StringVar(&c.out, "out", "", "Documentation output folder if not set the result is displayed using the standard output")
 	f.BoolVar(&c.noIndex, "no-index", false, "Do not generate the commands index")
+	f.BoolVar(&c.split, "split", false, "Generate one file per command")
 }
 
 func (c *documentationCommand) Run(ctx *Context) error {
+	if c.split {
+		if c.out == "" {
+			return errors.New("set the output folder when using the split option")
+		}
+		return c.dumpSeveralFiles()
+	}
+	return c.dumpOneFile(ctx)
+}
+
+// dumpeOneFile is invoked when the output is contained in a single output
+func (c *documentationCommand) dumpOneFile(ctx *Context) error {
 	var writer *bufio.Writer
 	if c.out != "" {
-		f, err := os.Create(c.out)
+		_, err := os.Stat(c.out)
+		if err != nil {
+			return err
+		}
+
+		target := fmt.Sprintf("%s/%s", c.out, DocumentationFileName)
+
+		f, err := os.Create(target)
 		if err != nil {
 			return err
 		}
@@ -55,15 +81,13 @@ func (c *documentationCommand) Run(ctx *Context) error {
 	} else {
 		writer = bufio.NewWriter(ctx.Stdout)
 	}
+
 	return c.dumpEntries(writer)
 }
 
-func (c *documentationCommand) dumpEntries(writer *bufio.Writer) error {
-	if len(c.super.subcmds) == 0 {
-		fmt.Printf("No commands found for %s", c.super.Name)
-		return nil
-	}
-
+// getSortedListCommands returns an array with the sorted list of
+// command names
+func (c *documentationCommand) getSortedListCommands() []string {
 	// sort the commands
 	sorted := make([]string, len(c.super.subcmds))
 	i := 0
@@ -72,6 +96,67 @@ func (c *documentationCommand) dumpEntries(writer *bufio.Writer) error {
 		i++
 	}
 	sort.Strings(sorted)
+	return sorted
+}
+
+// dumpSeveralFiles is invoked when every command is dumped into
+// a separated entity
+func (c *documentationCommand) dumpSeveralFiles() error {
+	_, err := os.Stat(c.out)
+	if err != nil {
+		return err
+	}
+
+	if len(c.super.subcmds) == 0 {
+		fmt.Printf("No commands found for %s", c.super.Name)
+		return nil
+	}
+
+	sorted := c.getSortedListCommands()
+
+	// create index if indicated
+	if !c.noIndex {
+		target := fmt.Sprintf("%s/%s", c.out, DocumentationIndexFileName)
+		f, err := os.Create(target)
+		if err != nil {
+			return err
+		}
+
+		writer := bufio.NewWriter(f)
+		_, err = writer.WriteString(c.commandsIndex(sorted))
+		if err != nil {
+			return err
+		}
+		f.Close()
+	}
+
+	folder := c.out + "/%s.md"
+	for _, command := range sorted {
+		target := fmt.Sprintf(folder, command)
+		f, err := os.Create(target)
+		if err != nil {
+			return err
+		}
+		writer := bufio.NewWriter(f)
+		formatted := c.formatCommand(c.super.subcmds[command], false)
+		_, err = writer.WriteString(formatted)
+		if err != nil {
+			return err
+		}
+		writer.Flush()
+		f.Close()
+	}
+
+	return err
+}
+
+func (c *documentationCommand) dumpEntries(writer *bufio.Writer) error {
+	if len(c.super.subcmds) == 0 {
+		fmt.Printf("No commands found for %s", c.super.Name)
+		return nil
+	}
+
+	sorted := c.getSortedListCommands()
 
 	if !c.noIndex {
 		_, err := writer.WriteString(c.commandsIndex(sorted))
@@ -82,7 +167,7 @@ func (c *documentationCommand) dumpEntries(writer *bufio.Writer) error {
 
 	var err error
 	for _, nameCmd := range sorted {
-		_, err = writer.WriteString(c.formatCommand(c.super.subcmds[nameCmd]))
+		_, err = writer.WriteString(c.formatCommand(c.super.subcmds[nameCmd], true))
 		if err != nil {
 			return err
 		}
@@ -99,8 +184,16 @@ func (c *documentationCommand) commandsIndex(listCommands []string) string {
 	return index
 }
 
-func (c *documentationCommand) formatCommand(ref commandReference) string {
-	formatted := "# " + strings.ToUpper(ref.name) + "\n"
+// formatCommand returns a string representation of the information contained
+// by a command in Markdown format. The title param can be used to set
+// whether the command name should be a title or not. This is particularly
+// handy when splitting the commands in different files.
+func (c *documentationCommand) formatCommand(ref commandReference, title bool) string {
+	formatted := ""
+	if title {
+		formatted = "# " + strings.ToUpper(ref.name) + "\n"
+	}
+
 	if ref.alias != "" {
 		formatted += "**Alias:** " + ref.alias + "\n"
 	}
@@ -109,18 +202,12 @@ func (c *documentationCommand) formatCommand(ref commandReference) string {
 	}
 	formatted += "\n"
 
-	// Description
+	// Summary
 	formatted += "## Summary\n" + ref.command.Info().Purpose + "\n\n"
 
 	// Usage
 	if ref.command.Info().Args != "" {
 		formatted += "## Usage\n```" + ref.command.Info().Args + "```\n\n"
-	}
-
-	// Options
-	formattedFlags := c.formatFlags(ref.command)
-	if len(formattedFlags) > 0 {
-		formatted += "## Options\n" + formattedFlags + "\n"
 	}
 
 	// Description
@@ -138,6 +225,12 @@ func (c *documentationCommand) formatCommand(ref commandReference) string {
 		formatted += "\n"
 	}
 
+	// Options
+	formattedFlags := c.formatFlags(ref.command)
+	if len(formattedFlags) > 0 {
+		formatted += "## Options\n" + formattedFlags + "\n"
+	}
+
 	// See Also
 	if len(ref.command.Info().SeeAlso) > 0 {
 		formatted += "## See Also\n"
@@ -147,7 +240,7 @@ func (c *documentationCommand) formatCommand(ref commandReference) string {
 		formatted += "\n"
 	}
 
-	formatted += "---\n"
+	formatted += "---\n\n"
 
 	return formatted
 
