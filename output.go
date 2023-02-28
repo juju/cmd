@@ -54,11 +54,11 @@ func FormatJson(writer io.Writer, value interface{}) error {
 }
 
 // FormatSmart marshals value into a []byte according to the following rules:
-//   * string:        untouched
-//   * bool:          converted to `True` or `False` (to match pyjuju)
-//   * int or float:  converted to sensible strings
-//   * []string:      joined by `\n`s into a single string
-//   * anything else: delegate to FormatYaml
+//   - string:        untouched
+//   - bool:          converted to `True` or `False` (to match pyjuju)
+//   - int or float:  converted to sensible strings
+//   - []string:      joined by `\n`s into a single string
+//   - anything else: delegate to FormatYaml
 func FormatSmart(writer io.Writer, value interface{}) error {
 	if value == nil {
 		return nil
