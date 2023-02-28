@@ -200,6 +200,19 @@ func (c *documentationCommand) formatCommand(ref commandReference, title bool) s
 		formatted = "# " + strings.ToUpper(ref.name) + "\n"
 	}
 
+	// See Also
+	if len(ref.command.Info().SeeAlso) > 0 {
+		formatted += "## See Also\n"
+		prefix := "#"
+		if c.url != "" {
+			prefix = c.url + "/"
+		}
+		for _, s := range ref.command.Info().SeeAlso {
+			formatted += fmt.Sprintf("[%s](%s%s)\n", s, prefix, s)
+		}
+		formatted += "\n"
+	}
+
 	if ref.alias != "" {
 		formatted += "**Alias:** " + ref.alias + "\n"
 	}
@@ -235,19 +248,6 @@ func (c *documentationCommand) formatCommand(ref commandReference, title bool) s
 	formattedFlags := c.formatFlags(ref.command)
 	if len(formattedFlags) > 0 {
 		formatted += "## Options\n" + formattedFlags + "\n"
-	}
-
-	// See Also
-	if len(ref.command.Info().SeeAlso) > 0 {
-		formatted += "## See Also\n"
-		prefix := "#"
-		if c.url != "" {
-			prefix = c.url + "/"
-		}
-		for _, s := range ref.command.Info().SeeAlso {
-			formatted += fmt.Sprintf("[%s](%s%s)\n", s, prefix, s)
-		}
-		formatted += "\n"
 	}
 
 	formatted += "---\n\n"
