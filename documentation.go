@@ -29,6 +29,7 @@ type documentationCommand struct {
 	out     string
 	noIndex bool
 	split   bool
+	url     string
 }
 
 func newDocumentationCommand(s *SuperCommand) *documentationCommand {
@@ -38,7 +39,7 @@ func newDocumentationCommand(s *SuperCommand) *documentationCommand {
 func (c *documentationCommand) Info() *Info {
 	return &Info{
 		Name:    "documentation",
-		Args:    "--out <target-folder> --noindex --split",
+		Args:    "--out <target-folder> --noindex --split --url <base-url>",
 		Purpose: "Generate the documentation for all commands",
 		Doc:     doc,
 	}
@@ -49,6 +50,7 @@ func (c *documentationCommand) SetFlags(f *gnuflag.FlagSet) {
 	f.StringVar(&c.out, "out", "", "Documentation output folder if not set the result is displayed using the standard output")
 	f.BoolVar(&c.noIndex, "no-index", false, "Do not generate the commands index")
 	f.BoolVar(&c.split, "split", false, "Generate one file per command")
+	f.StringVar(&c.url, "url", "", "Documentation host URL")
 }
 
 func (c *documentationCommand) Run(ctx *Context) error {
@@ -177,8 +179,12 @@ func (c *documentationCommand) dumpEntries(writer *bufio.Writer) error {
 
 func (c *documentationCommand) commandsIndex(listCommands []string) string {
 	index := "# Index\n"
+	prefix := "#"
+	if c.url != "" {
+		prefix = c.url + "/"
+	}
 	for id, name := range listCommands {
-		index += fmt.Sprintf("%d. [%s](#%s)\n", id, name, name)
+		index += fmt.Sprintf("%d. [%s](%s%s)\n", id, name, prefix, name)
 	}
 	index += "---\n\n"
 	return index
@@ -234,8 +240,12 @@ func (c *documentationCommand) formatCommand(ref commandReference, title bool) s
 	// See Also
 	if len(ref.command.Info().SeeAlso) > 0 {
 		formatted += "## See Also\n"
+		prefix := "#"
+		if c.url != "" {
+			prefix = c.url + "/"
+		}
 		for _, s := range ref.command.Info().SeeAlso {
-			formatted += fmt.Sprintf("[%s](#%s)\n", s, s)
+			formatted += fmt.Sprintf("[%s](%s%s)\n", s, prefix, s)
 		}
 		formatted += "\n"
 	}
