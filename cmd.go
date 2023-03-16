@@ -285,7 +285,7 @@ type Info struct {
 	Doc string
 
 	// Examples is a collection of running examples.
-	Examples []string
+	Examples string
 
 	// SeeAlso is a collection of additional commands to be checked.
 	SeeAlso []string

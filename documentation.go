@@ -200,14 +200,21 @@ func (c *documentationCommand) formatCommand(ref commandReference, title bool) s
 		formatted = "# " + strings.ToUpper(ref.name) + "\n"
 	}
 
+	var info *Info
+	if ref.name == "documentation" {
+		info = c.Info()
+	} else {
+		info = ref.command.Info()
+	}
+
 	// See Also
-	if len(ref.command.Info().SeeAlso) > 0 {
+	if len(info.SeeAlso) > 0 {
 		formatted += "## See Also\n"
 		prefix := "#"
 		if c.url != "" {
 			prefix = c.url + "/"
 		}
-		for _, s := range ref.command.Info().SeeAlso {
+		for _, s := range info.SeeAlso {
 			formatted += fmt.Sprintf("[%s](%s%s)\n", s, prefix, s)
 		}
 		formatted += "\n"
@@ -222,30 +229,27 @@ func (c *documentationCommand) formatCommand(ref commandReference, title bool) s
 	formatted += "\n"
 
 	// Summary
-	formatted += "## Summary\n" + ref.command.Info().Purpose + "\n\n"
+	formatted += "## Summary\n" + info.Purpose + "\n\n"
 
 	// Usage
-	if ref.command.Info().Args != "" {
-		formatted += "## Usage\n```" + ref.command.Info().Args + "```\n\n"
+	if strings.TrimSpace(info.Args) != "" {
+		formatted += "## Usage\n```" + info.Args + "```\n\n"
 	}
 
 	// Description
-	doc := ref.command.Info().Doc
-	if doc != "" {
-		formatted += "## Description\n" + ref.command.Info().Doc + "\n\n"
+	doc := info.Doc
+	if strings.TrimSpace(doc) != "" {
+		formatted += "## Description\n" + doc + "\n\n"
 	}
 
 	// Examples
-	if len(ref.command.Info().Examples) > 0 {
-		formatted += "## Examples\n"
-		for _, e := range ref.command.Info().Examples {
-			formatted += "`" + e + "`\n"
-		}
-		formatted += "\n"
+	examples := info.Examples
+	if strings.TrimSpace(examples) != "" {
+		formatted += "## Examples\n" + examples + "\n\n"
 	}
 
 	// Options
-	formattedFlags := c.formatFlags(ref.command)
+	formattedFlags := c.formatFlags(ref.command, info)
 	if len(formattedFlags) > 0 {
 		formatted += "## Options\n" + formattedFlags + "\n"
 	}
@@ -260,14 +264,23 @@ func (c *documentationCommand) formatCommand(ref commandReference, title bool) s
 // the gnuflag.PrintDefaults. The code is extended here
 // to permit additional formatting without modifying the
 // gnuflag package.
-func (d *documentationCommand) formatFlags(c Command) string {
+func (d *documentationCommand) formatFlags(c Command, info *Info) string {
 	flagsAlias := FlagAlias(c, "")
 	if flagsAlias == "" {
 		// For backward compatibility, the default is 'flag'.
 		flagsAlias = "flag"
 	}
-	f := gnuflag.NewFlagSetWithFlagKnownAs(c.Info().Name, gnuflag.ContinueOnError, flagsAlias)
-	c.SetFlags(f)
+	f := gnuflag.NewFlagSetWithFlagKnownAs(info.Name, gnuflag.ContinueOnError, flagsAlias)
+
+	// if we are working with the documentation command,
+	// we have to set flags on a new instance, otherwise
+	// we will overwrite the current flag values
+	if info.Name != "documentation" {
+		c.SetFlags(f)
+	} else {
+		c = newDocumentationCommand(d.super)
+		c.SetFlags(f)
+	}
 
 	// group together all flags for a given value
 	flags := make(map[interface{}]flagsByLength)
