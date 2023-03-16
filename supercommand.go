@@ -215,7 +215,7 @@ func (c *SuperCommand) init() {
 	}
 	c.subcmds = map[string]commandReference{
 		"help": {command: c.help},
-		"documentation": {command: newDocumentationCommand(c),
+		"documentation": {command: c.documentation,
 			name: "documentation"},
 	}
 
