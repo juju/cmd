@@ -236,8 +236,8 @@ func (c *documentationCommand) formatCommand(ref commandReference, title bool) s
 
 	// Usage
 	if strings.TrimSpace(info.Args) != "" {
-		formatted += "## Usage\n```juju " + info.Name + " [options] " + info.Args + "```\n\n"
-	}
+		formatted += "## Usage\n```" + c.super.Name + " [options] " + info.Args + "```\n\n"
+        }
 
 	// Description
 	doc := info.Doc
