@@ -39,7 +39,7 @@ func newDocumentationCommand(s *SuperCommand) *documentationCommand {
 func (c *documentationCommand) Info() *Info {
 	return &Info{
 		Name:    "documentation",
-		Args:    "--out <target-folder> --noindex --split --url <base-url>",
+		Args:    "--out <target-folder> --no-index --split --url <base-url>",
 		Purpose: "Generate the documentation for all commands",
 		Doc:     doc,
 	}
@@ -49,14 +49,14 @@ func (c *documentationCommand) Info() *Info {
 func (c *documentationCommand) SetFlags(f *gnuflag.FlagSet) {
 	f.StringVar(&c.out, "out", "", "Documentation output folder if not set the result is displayed using the standard output")
 	f.BoolVar(&c.noIndex, "no-index", false, "Do not generate the commands index")
-	f.BoolVar(&c.split, "split", false, "Generate one file per command")
+	f.BoolVar(&c.split, "split", false, "Generate a separate Markdown file for each command")
 	f.StringVar(&c.url, "url", "", "Documentation host URL")
 }
 
 func (c *documentationCommand) Run(ctx *Context) error {
 	if c.split {
 		if c.out == "" {
-			return errors.New("set the output folder when using the split option")
+			return errors.New("when using --split, you must set the output folder using --out=<folder>")
 		}
 		return c.dumpSeveralFiles()
 	}
@@ -104,7 +104,10 @@ func (c *documentationCommand) getSortedListCommands() []string {
 // dumpSeveralFiles is invoked when every command is dumped into
 // a separated entity
 func (c *documentationCommand) dumpSeveralFiles() error {
-	_, err := os.Stat(c.out)
+	// Attempt to create output directory. This will fail if:
+	// - we don't have permission to create the dir
+	// - a file already exists at the given path
+	err := os.MkdirAll(c.out, os.ModePerm)
 	if err != nil {
 		return err
 	}
@@ -209,13 +212,13 @@ func (c *documentationCommand) formatCommand(ref commandReference, title bool) s
 
 	// See Also
 	if len(info.SeeAlso) > 0 {
-		formatted += "## See Also\n"
+		formatted += "## See also\n"
 		prefix := "#"
 		if c.url != "" {
 			prefix = c.url + "/"
 		}
 		for _, s := range info.SeeAlso {
-			formatted += fmt.Sprintf("[%s](%s%s)\n", s, prefix, s)
+			formatted += fmt.Sprintf("- [%s](%s%s)\n", s, prefix, s)
 		}
 		formatted += "\n"
 	}
@@ -233,8 +236,8 @@ func (c *documentationCommand) formatCommand(ref commandReference, title bool) s
 
 	// Usage
 	if strings.TrimSpace(info.Args) != "" {
-		formatted += "## Usage\n```" + info.Args + "```\n\n"
-	}
+		formatted += "## Usage\n```" + c.super.Name + " [options] " + info.Args + "```\n\n"
+        }
 
 	// Description
 	doc := info.Doc
