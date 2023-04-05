@@ -372,7 +372,7 @@ func (i *Info) HelpWithSuperFlags(superF *gnuflag.FlagSet, f *gnuflag.FlagSet) [
 		fmt.Fprintf(buf, "\nAliases: %s\n", strings.Join(i.Aliases, ", "))
 	}
 	if len(i.Examples) > 0 {
-		fmt.Fprintf(buf, "\nExamples:\n%s\n", i.Examples)
+		fmt.Fprintf(buf, "\nExamples:\n%s", i.Examples)
 	}
 
 	return buf.Bytes()
