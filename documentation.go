@@ -23,6 +23,30 @@ var doc string = `
 This command generates a markdown formatted document with all the commands, their descriptions, arguments, and examples.
 `
 
+var documentationExamples = `
+    juju documentation
+	juju documentation --split 
+	juju documentation --split --no-index --out /tmp/docs
+	
+	To render markdown documentation using a list of existing
+	commands, you can use a file with the following syntax
+	
+	command1: id1
+	command2: id2
+	commandN: idN
+
+	For example:
+
+	add-cloud: 1183
+	add-secret: 1284
+	remove-cloud: 4344
+
+	Then, the urls will be populated using the ids indicated
+	in the file above.
+
+	juju documentation --split --no-index --out /tmp/docs --discourse-ids /tmp/docs/myids
+`
+
 type documentationCommand struct {
 	CommandBase
 	super   *SuperCommand
@@ -30,6 +54,16 @@ type documentationCommand struct {
 	noIndex bool
 	split   bool
 	url     string
+	idsPath string
+	// ids is contains a numeric id of every command
+	// add-cloud: 1112
+	// remove-user: 3333
+	// etc...
+	ids map[string]string
+	// reverseAliases maintains a reverse map of the alias and the
+	// targetting command. This is used to find the ids corresponding
+	// to a given alias
+	reverseAliases map[string]string
 }
 
 func newDocumentationCommand(s *SuperCommand) *documentationCommand {
@@ -38,10 +72,11 @@ func newDocumentationCommand(s *SuperCommand) *documentationCommand {
 
 func (c *documentationCommand) Info() *Info {
 	return &Info{
-		Name:    "documentation",
-		Args:    "--out <target-folder> --no-index --split --url <base-url>",
-		Purpose: "Generate the documentation for all commands",
-		Doc:     doc,
+		Name:     "documentation",
+		Args:     "--out <target-folder> --no-index --split --url <base-url> --discourse-ids <filepath>",
+		Purpose:  "Generate the documentation for all commands",
+		Doc:      doc,
+		Examples: documentationExamples,
 	}
 }
 
@@ -51,6 +86,7 @@ func (c *documentationCommand) SetFlags(f *gnuflag.FlagSet) {
 	f.BoolVar(&c.noIndex, "no-index", false, "Do not generate the commands index")
 	f.BoolVar(&c.split, "split", false, "Generate a separate Markdown file for each command")
 	f.StringVar(&c.url, "url", "", "Documentation host URL")
+	f.StringVar(&c.idsPath, "discourse-ids", "", "File containing a mapping of commands and their discourse ids")
 }
 
 func (c *documentationCommand) Run(ctx *Context) error {
@@ -101,6 +137,17 @@ func (c *documentationCommand) getSortedListCommands() []string {
 	return sorted
 }
 
+func (c *documentationCommand) computeReverseAliases() {
+	c.reverseAliases = make(map[string]string)
+
+	for name, content := range c.super.subcmds {
+		for _, alias := range content.command.Info().Aliases {
+			c.reverseAliases[alias] = name
+		}
+	}
+
+}
+
 // dumpSeveralFiles is invoked when every command is dumped into
 // a separated entity
 func (c *documentationCommand) dumpSeveralFiles() error {
@@ -118,6 +165,17 @@ func (c *documentationCommand) dumpSeveralFiles() error {
 	}
 
 	sorted := c.getSortedListCommands()
+	c.computeReverseAliases()
+
+	// if the ids were provided, we must have the same
+	// number of commands and ids
+	if c.idsPath != "" {
+		// get the list of ids
+		c.ids, err = c.readFileIds(c.idsPath)
+		if err != nil {
+			return err
+		}
+	}
 
 	// create index if indicated
 	if !c.noIndex {
@@ -155,6 +213,27 @@ func (c *documentationCommand) dumpSeveralFiles() error {
 	return err
 }
 
+func (c *documentationCommand) readFileIds(path string) (map[string]string, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	reader := bufio.NewScanner(f)
+	ids := make(map[string]string)
+	for reader.Scan() {
+		line := reader.Text()
+		items := strings.Split(line, ":")
+		if len(items) != 2 {
+			return nil, fmt.Errorf("malformed line [%s]", line)
+		}
+		command := strings.TrimSpace(items[0])
+		id := strings.TrimSpace(items[1])
+		ids[command] = id
+	}
+	return ids, nil
+}
+
 func (c *documentationCommand) dumpEntries(writer *bufio.Writer) error {
 	if len(c.super.subcmds) == 0 {
 		fmt.Printf("No commands found for %s", c.super.Name)
@@ -183,11 +262,22 @@ func (c *documentationCommand) dumpEntries(writer *bufio.Writer) error {
 func (c *documentationCommand) commandsIndex(listCommands []string) string {
 	index := "# Index\n"
 	prefix := "#"
+	if c.ids != nil {
+		prefix = "/t/"
+	}
 	if c.url != "" {
 		prefix = c.url + "/"
 	}
+
 	for id, name := range listCommands {
-		index += fmt.Sprintf("%d. [%s](%s%s)\n", id, name, prefix, name)
+		if name == "documentation" || name == "help" {
+			continue
+		}
+		target, err := c.getTargetCmd(name)
+		if err != nil {
+			fmt.Printf("[ERROR] command [%s] has no id, please add it to the list\n", name)
+		}
+		index += fmt.Sprintf("%d. [%s](%s%s)\n", id, name, prefix, target)
 	}
 	index += "---\n\n"
 	return index
@@ -214,11 +304,19 @@ func (c *documentationCommand) formatCommand(ref commandReference, title bool) s
 	if len(info.SeeAlso) > 0 {
 		formatted += "## See also\n"
 		prefix := "#"
-		if c.url != "" {
-			prefix = c.url + "/"
+		if c.ids != nil {
+			prefix = "/t/"
 		}
+		if c.url != "" {
+			prefix = c.url + "t/"
+		}
+
 		for _, s := range info.SeeAlso {
-			formatted += fmt.Sprintf("- [%s](%s%s)\n", s, prefix, s)
+			target, err := c.getTargetCmd(s)
+			if err != nil {
+				fmt.Println(err.Error())
+			}
+			formatted += fmt.Sprintf("- [%s](%s%s)\n", s, prefix, target)
 		}
 		formatted += "\n"
 	}
@@ -237,7 +335,7 @@ func (c *documentationCommand) formatCommand(ref commandReference, title bool) s
 	// Usage
 	if strings.TrimSpace(info.Args) != "" {
 		formatted += "## Usage\n```" + c.super.Name + " [options] " + info.Args + "```\n\n"
-        }
+	}
 
 	// Description
 	doc := info.Doc
@@ -261,6 +359,30 @@ func (c *documentationCommand) formatCommand(ref commandReference, title bool) s
 
 	return formatted
 
+}
+
+// getTargetCmd is an auxiliary function that returns the target command or
+// the corresponding id if available.
+func (d *documentationCommand) getTargetCmd(cmd string) (string, error) {
+	// no ids were set, return the original command
+	if d.ids == nil {
+		return cmd, nil
+	}
+	target, found := d.ids[cmd]
+	if found {
+		return target, nil
+	} else {
+		// check if this is an alias
+		targetCmd, found := d.reverseAliases[cmd]
+		fmt.Printf("use alias %s -> %s\n", cmd, targetCmd)
+		if !found {
+			// if we're working with ids, and we have to mmake the translation,
+			// we need to have an id per every requested command
+			return "", fmt.Errorf("requested id for command %s was not found", cmd)
+		}
+		return targetCmd, nil
+
+	}
 }
 
 // formatFlags is an internal formatting solution similar to
