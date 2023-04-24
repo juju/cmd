@@ -337,7 +337,10 @@ func (c *documentationCommand) formatCommand(ref commandReference, title bool) s
 
 	// Usage
 	if strings.TrimSpace(info.Args) != "" {
-		formatted += "## Usage\n```" + c.super.Name + " [options] " + info.Args + "```\n\n"
+		formatted += fmt.Sprintf(`## Usage
+`+"```"+`%s %s [options] %s`+"```"+`
+
+`, c.super.Name, info.Name, info.Args)
 	}
 
 	// Options
@@ -353,7 +356,7 @@ func (c *documentationCommand) formatCommand(ref commandReference, title bool) s
 	}
 
 	// Details
-	doc := info.Doc
+	doc := EscapeMarkdown(info.Doc)
 	if strings.TrimSpace(doc) != "" {
 		formatted += "## Details\n" + doc + "\n\n"
 	}
@@ -361,7 +364,6 @@ func (c *documentationCommand) formatCommand(ref commandReference, title bool) s
 	formatted += "---\n\n"
 
 	return formatted
-
 }
 
 // getTargetCmd is an auxiliary function that returns the target command or
@@ -434,7 +436,8 @@ func (d *documentationCommand) formatFlags(c Command, info *Info) string {
 			}
 			theFlags += fmt.Sprintf("`--%s`", f.Name)
 		}
-		formatted += fmt.Sprintf("| %s | %s | %s |\n", theFlags, fs[0].DefValue, fs[0].Usage)
+		formatted += fmt.Sprintf("| %s | %s | %s |\n", theFlags,
+			EscapeMarkdown(fs[0].DefValue), EscapeMarkdown(fs[0].Usage))
 	}
 	return formatted
 }
@@ -470,4 +473,51 @@ func (f flagsByName) Swap(i, j int) {
 }
 func (f flagsByName) Len() int {
 	return len(f)
+}
+
+// EscapeMarkdown returns a copy of the input string, in which any special
+// Markdown characters (e.g. < > |) are escaped.
+func EscapeMarkdown(raw string) string {
+	escapeSeqs := map[rune]string{
+		'<': "&lt;",
+		'>': "&gt;",
+		'&': "&amp;",
+		'|': "&#x7c;",
+	}
+
+	var escaped strings.Builder
+	escaped.Grow(len(raw))
+
+	lines := strings.Split(raw, "\n")
+	for i, line := range lines {
+		if strings.HasPrefix(line, "    ") {
+			// Literal code block - don't escape anything
+			escaped.WriteString(line)
+
+		} else {
+			// Keep track of whether we are inside a code span `...`
+			// If so, don't escape characters
+			insideCodeSpan := false
+
+			for _, c := range line {
+				if c == '`' {
+					insideCodeSpan = !insideCodeSpan
+				}
+
+				if !insideCodeSpan {
+					if escapeSeq, ok := escapeSeqs[c]; ok {
+						escaped.WriteString(escapeSeq)
+						continue
+					}
+				}
+				escaped.WriteRune(c)
+			}
+		}
+
+		if i < len(lines)-1 {
+			escaped.WriteRune('\n')
+		}
+	}
+
+	return escaped.String()
 }
