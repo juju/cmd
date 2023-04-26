@@ -6,3 +6,9 @@ package cmd
 func NewVersionCommand(version string, versionDetail interface{}) Command {
 	return newVersionCommand(version, versionDetail)
 }
+
+func FormatCommand(command Command, super *SuperCommand, title bool) string {
+	docCmd := &documentationCommand{super: super}
+	ref := commandReference{command: command}
+	return docCmd.formatCommand(ref, title)
+}
