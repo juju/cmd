@@ -99,7 +99,7 @@ func (c *documentationCommand) Run(ctx *Context) error {
 	return c.dumpOneFile(ctx)
 }
 
-// dumpeOneFile is invoked when the output is contained in a single output
+// dumpOneFile is invoked when the output is contained in a single output
 func (c *documentationCommand) dumpOneFile(ctx *Context) error {
 	var writer *bufio.Writer
 	if c.out != "" {
@@ -302,7 +302,7 @@ func (c *documentationCommand) formatCommand(ref commandReference, title bool) s
 
 	// See Also
 	if len(info.SeeAlso) > 0 {
-		formatted += "## See also\n"
+		formatted += "> See also: "
 		prefix := "#"
 		if c.ids != nil {
 			prefix = "/t/"
@@ -311,12 +311,15 @@ func (c *documentationCommand) formatCommand(ref commandReference, title bool) s
 			prefix = c.url + "t/"
 		}
 
-		for _, s := range info.SeeAlso {
+		for i, s := range info.SeeAlso {
 			target, err := c.getTargetCmd(s)
 			if err != nil {
 				fmt.Println(err.Error())
 			}
-			formatted += fmt.Sprintf("- [%s](%s%s)\n", s, prefix, target)
+			formatted += fmt.Sprintf("[%s](%s%s)", s, prefix, target)
+			if i < len(info.SeeAlso)-1 {
+				formatted += ", "
+			}
 		}
 		formatted += "\n"
 	}
@@ -337,10 +340,10 @@ func (c *documentationCommand) formatCommand(ref commandReference, title bool) s
 		formatted += "## Usage\n```" + c.super.Name + " [options] " + info.Args + "```\n\n"
 	}
 
-	// Description
-	doc := info.Doc
-	if strings.TrimSpace(doc) != "" {
-		formatted += "## Description\n" + doc + "\n\n"
+	// Options
+	formattedFlags := c.formatFlags(ref.command, info)
+	if len(formattedFlags) > 0 {
+		formatted += "### Options\n" + formattedFlags + "\n"
 	}
 
 	// Examples
@@ -349,10 +352,10 @@ func (c *documentationCommand) formatCommand(ref commandReference, title bool) s
 		formatted += "## Examples\n" + examples + "\n\n"
 	}
 
-	// Options
-	formattedFlags := c.formatFlags(ref.command, info)
-	if len(formattedFlags) > 0 {
-		formatted += "## Options\n" + formattedFlags + "\n"
+	// Details
+	doc := info.Doc
+	if strings.TrimSpace(doc) != "" {
+		formatted += "## Details\n" + doc + "\n\n"
 	}
 
 	formatted += "---\n\n"
