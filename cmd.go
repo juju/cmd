@@ -375,11 +375,10 @@ func (i *Info) HelpWithSuperFlags(superF *gnuflag.FlagSet, f *gnuflag.FlagSet) [
 		fmt.Fprintf(buf, "\nExamples:\n%s", i.Examples)
 	}
 	if len(i.SeeAlso) > 0 {
-		prettySeeAlso := ""
+		fmt.Fprintf(buf, "\nSee also:\n")
 		for _, entry := range i.SeeAlso {
-			prettySeeAlso = prettySeeAlso + fmt.Sprintf(" - %s\n", entry)
+			fmt.Fprintf(buf, " - %s\n", entry)
 		}
-		fmt.Fprintf(buf, "\nSee also:\n%s\n", prettySeeAlso)
 	}
 
 	return buf.Bytes()
