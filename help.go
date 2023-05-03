@@ -21,6 +21,7 @@ type helpCommand struct {
 
 	target      *commandReference
 	targetSuper *SuperCommand
+	extended    bool
 }
 
 func (c *helpCommand) init() {
