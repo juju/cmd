@@ -417,6 +417,9 @@ func (d *documentationCommand) formatFlags(c Command, info *Info) string {
 	f.VisitAll(func(f *gnuflag.Flag) {
 		flags[f.Value] = append(flags[f.Value], f)
 	})
+	if len(flags) == 0 {
+		return ""
+	}
 
 	// sort the output flags by shortest name for each group.
 	var byName flagsByName
