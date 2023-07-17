@@ -391,11 +391,23 @@ func (i *Info) HelpWithSuperFlags(superF *gnuflag.FlagSet, f *gnuflag.FlagSet) [
 	return buf.Bytes()
 }
 
+// Default commands should be hidden from the help output.
+func isDefaultCommand(cmd string) bool {
+	switch cmd {
+	case "documentation", "help", "version":
+		return true
+	}
+	return false
+}
+
 func (i *Info) describeCommands() string {
 	// Sort command names, and work out length of the longest one
 	cmdNames := make([]string, 0, len(i.Subcommands))
 	longest := 0
 	for name := range i.Subcommands {
+		if isDefaultCommand(name) {
+			continue
+		}
 		if len(name) > longest {
 			longest = len(name)
 		}
