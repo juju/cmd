@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	"github.com/juju/ansiterm"
@@ -284,6 +285,9 @@ type Info struct {
 	// Doc is the long documentation for the Command.
 	Doc string
 
+	// Subcommands stores the name and description of each subcommand.
+	Subcommands map[string]string
+
 	// Examples is a collection of running examples.
 	Examples string
 
@@ -374,6 +378,9 @@ func (i *Info) HelpWithSuperFlags(superF *gnuflag.FlagSet, f *gnuflag.FlagSet) [
 	if len(i.Examples) > 0 {
 		fmt.Fprintf(buf, "\nExamples:\n%s", i.Examples)
 	}
+	if len(i.Subcommands) > 0 {
+		fmt.Fprintf(buf, "\n%s", i.describeCommands())
+	}
 	if len(i.SeeAlso) > 0 {
 		fmt.Fprintf(buf, "\nSee also:\n")
 		for _, entry := range i.SeeAlso {
@@ -382,6 +389,26 @@ func (i *Info) HelpWithSuperFlags(superF *gnuflag.FlagSet, f *gnuflag.FlagSet) [
 	}
 
 	return buf.Bytes()
+}
+
+func (i *Info) describeCommands() string {
+	// Sort command names, and work out length of the longest one
+	cmdNames := make([]string, 0, len(i.Subcommands))
+	longest := 0
+	for name := range i.Subcommands {
+		if len(name) > longest {
+			longest = len(name)
+		}
+		cmdNames = append(cmdNames, name)
+	}
+	sort.Strings(cmdNames)
+
+	descr := "Subcommands:\n"
+	for _, name := range cmdNames {
+		purpose := i.Subcommands[name]
+		descr += fmt.Sprintf("    %-*s - %s\n", longest, name, purpose)
+	}
+	return descr
 }
 
 // Errors from commands can be ErrSilent (don't print an error message),

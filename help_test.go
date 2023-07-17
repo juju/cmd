@@ -70,6 +70,11 @@ func (s *HelpCommandSuite) TestHelpOutput(c *gc.C) {
 			message:  "too many args",
 			args:     []string{"help", "blah", "blah"},
 			errMatch: `extra arguments to command help: \["blah"\]`,
+		}, {
+			args: []string{"help", "commands"},
+			helpMatch: "blah\\s+blah the juju" +
+				"documentation\\s+Generate the documentation for all commands" +
+				"help\\s+Show help on a command or other topic.",
 		},
 	} {
 		supername := "jujutest"

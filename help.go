@@ -31,7 +31,7 @@ func (c *helpCommand) init() {
 	c.topics = map[string]topic{
 		"commands": {
 			short: "Basic help for all commands",
-			long:  func() string { return c.super.describeCommands(true) },
+			long:  func() string { return c.describeCommands() },
 		},
 		flagKey: {
 			short: fmt.Sprintf("%vs common to all commands", strings.Title(c.super.FlagKnownAs)),
@@ -59,6 +59,31 @@ func (c *helpCommand) addTopic(name, short string, long func() string, aliases .
 		}
 		c.topics[alias] = topic{short, long, true}
 	}
+}
+
+func (c *helpCommand) describeCommands() string {
+	commands := c.super.describeCommands()
+
+	// Sort command names, and work out length of the longest one
+	cmdNames := make([]string, 0, len(commands))
+	longest := 0
+	for name := range commands {
+		if len(name) > longest {
+			longest = len(name)
+		}
+		cmdNames = append(cmdNames, name)
+	}
+	sort.Strings(cmdNames)
+
+	var descr string
+	for _, name := range cmdNames {
+		if len(descr) > 0 {
+			descr += "\n"
+		}
+		purpose := commands[name]
+		descr += fmt.Sprintf("%-*s  %s", longest, name, purpose)
+	}
+	return descr
 }
 
 func (c *helpCommand) globalOptions() string {
