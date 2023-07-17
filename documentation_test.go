@@ -19,6 +19,7 @@ func (s *documentationSuite) TestFormatCommand(c *gc.C) {
 		title    bool
 		expected string
 	}{{
+		// "smoke test" - just a regular command
 		command: &docTestCommand{
 			info: &cmd.Info{
 				Name:     "add-cloud",
@@ -53,6 +54,36 @@ examples for add-cloud...
 
 ## Details
 details for add-cloud...
+
+---
+
+`)[1:],
+	}, {
+		// no flags - don't print "Options" table
+		command: &docTestCommand{
+			info: &cmd.Info{
+				Name:     "foo",
+				Args:     "<args>",
+				Purpose:  "insert summary here...",
+				Doc:      "insert details here...",
+				Examples: "insert examples here...",
+			},
+			flags: []string{},
+		},
+		title: false,
+		expected: (`
+
+## Summary
+insert summary here...
+
+## Usage
+` + "```" + `juju foo [options] <args>` + "```" + `
+
+## Examples
+insert examples here...
+
+## Details
+insert details here...
 
 ---
 
