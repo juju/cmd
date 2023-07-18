@@ -251,7 +251,6 @@ func (c *documentationCommand) readFileIds(path string) (map[string]string, erro
 	return ids, nil
 }
 
-// TODO: handle subcommands here
 func (c *documentationCommand) dumpEntries(writer *bufio.Writer) error {
 	if len(c.super.subcmds) == 0 {
 		fmt.Printf("No commands found for %s", c.super.Name)

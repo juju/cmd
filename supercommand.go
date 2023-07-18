@@ -72,9 +72,10 @@ type SuperCommandParams struct {
 	// in the help output.
 	NotifyHelp func([]string)
 
-	Name    string
-	Purpose string
-	Doc     string
+	Name     string
+	Purpose  string
+	Doc      string
+	Examples string
 	// Log holds the Log value associated with the supercommand. If it's nil,
 	// no logging flags will be configured.
 	Log *Log
@@ -113,11 +114,12 @@ type FlagAdder interface {
 // the fully initialized structure.
 func NewSuperCommand(params SuperCommandParams) *SuperCommand {
 	command := &SuperCommand{
-		Name:    params.Name,
-		Purpose: params.Purpose,
-		Doc:     params.Doc,
-		Log:     params.Log,
-		Aliases: params.Aliases,
+		Name:     params.Name,
+		Purpose:  params.Purpose,
+		Doc:      params.Doc,
+		Examples: params.Examples,
+		Log:      params.Log,
+		Aliases:  params.Aliases,
 
 		globalFlags:         params.GlobalFlags,
 		usagePrefix:         params.UsagePrefix,
@@ -162,6 +164,7 @@ type SuperCommand struct {
 	Name                string
 	Purpose             string
 	Doc                 string
+	Examples            string
 	Log                 *Log
 	Aliases             []string
 	globalFlags         FlagAdder
@@ -361,6 +364,7 @@ func (c *SuperCommand) Info() *Info {
 		Purpose:     c.Purpose,
 		Doc:         strings.TrimSpace(c.Doc),
 		Subcommands: c.describeCommands(),
+		Examples:    c.Examples,
 		Aliases:     c.Aliases,
 		FlagKnownAs: c.FlagKnownAs,
 	}
