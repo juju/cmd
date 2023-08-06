@@ -95,6 +95,24 @@ func runCommand(ctx *cmd.Context, com cmd.Command, args []string) (*cmd.Context,
 	return ctx, com.Run(ctx)
 }
 
+// RunCommandWithContext runs the command asynchronously with
+// the specified context and returns a channel which providers
+// the command's errors.
+func RunCommandWithContext(ctx *cmd.Context, com cmd.Command, args ...string) chan error {
+	if ctx == nil {
+		panic("ctx == nil")
+	}
+	errc := make(chan error, 1)
+	go func() {
+		if err := InitCommand(com, args); err != nil {
+			errc <- err
+			return
+		}
+		errc <- com.Run(ctx)
+	}()
+	return errc
+}
+
 // TestInit checks that a command initialises correctly with the given set of
 // arguments.
 func TestInit(c *gc.C, com cmd.Command, args []string, errPat string) {
