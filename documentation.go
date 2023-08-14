@@ -7,6 +7,7 @@ import (
 	"bufio"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"sort"
@@ -102,7 +103,7 @@ func (c *documentationCommand) Run(ctx *Context) error {
 
 // dumpOneFile is invoked when the output is contained in a single output
 func (c *documentationCommand) dumpOneFile(ctx *Context) error {
-	var writer *bufio.Writer
+	var writer io.Writer
 	if c.out != "" {
 		_, err := os.Stat(c.out)
 		if err != nil {
@@ -116,9 +117,9 @@ func (c *documentationCommand) dumpOneFile(ctx *Context) error {
 			return err
 		}
 		defer f.Close()
-		writer = bufio.NewWriter(f)
+		writer = f
 	} else {
-		writer = bufio.NewWriter(ctx.Stdout)
+		writer = ctx.Stdout
 	}
 
 	return c.dumpEntries(writer)
@@ -251,24 +252,24 @@ func (c *documentationCommand) readFileIds(path string) (map[string]string, erro
 	return ids, nil
 }
 
-func (c *documentationCommand) dumpEntries(writer *bufio.Writer) error {
+func (c *documentationCommand) dumpEntries(w io.Writer) error {
 	if len(c.super.subcmds) == 0 {
 		fmt.Printf("No commands found for %s", c.super.Name)
 		return nil
 	}
 
 	if !c.noIndex {
-		_, err := writer.WriteString(c.commandsIndex())
+		_, err := fmt.Fprintf(w, "%s", c.commandsIndex())
 		if err != nil {
 			return err
 		}
 	}
 
-	return c.writeSections(writer, []string{c.super.Name}, true)
+	return c.writeSections(w, []string{c.super.Name}, true)
 }
 
 // writeSections (recursively) writes sections for all commands to the given file.
-func (c *documentationCommand) writeSections(writer *bufio.Writer, superCommands []string, printDefaultCommands bool) error {
+func (c *documentationCommand) writeSections(w io.Writer, superCommands []string, printDefaultCommands bool) error {
 	sorted := c.getSortedListCommands()
 	for _, name := range sorted {
 		if !printDefaultCommands && isDefaultCommand(name) {
@@ -276,14 +277,14 @@ func (c *documentationCommand) writeSections(writer *bufio.Writer, superCommands
 		}
 		ref := c.super.subcmds[name]
 		commandSeq := append(superCommands, name)
-		_, err := writer.WriteString(c.formatCommand(ref, true, commandSeq))
+		_, err := fmt.Fprintf(w, "%s", c.formatCommand(ref, true, commandSeq))
 		if err != nil {
 			return err
 		}
 
 		// Handle subcommands
 		if sc, ok := ref.command.(*SuperCommand); ok {
-			err = sc.documentation.writeSections(writer, commandSeq, false)
+			err = sc.documentation.writeSections(w, commandSeq, false)
 			if err != nil {
 				return err
 			}
