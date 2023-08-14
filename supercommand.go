@@ -101,7 +101,8 @@ type SuperCommandParams struct {
 	// will use that name when referring to an individual items/flags in this command.
 	// For example, if this value is 'option', the default message 'value for flag'
 	// will become 'value for option'.
-	FlagKnownAs string
+	FlagKnownAs             string
+	FlagDocumentationHidden bool
 }
 
 // FlagAdder represents a value that has associated flags.
@@ -121,15 +122,16 @@ func NewSuperCommand(params SuperCommandParams) *SuperCommand {
 		Log:      params.Log,
 		Aliases:  params.Aliases,
 
-		globalFlags:         params.GlobalFlags,
-		usagePrefix:         params.UsagePrefix,
-		missingCallback:     params.MissingCallback,
-		version:             params.Version,
-		versionDetail:       params.VersionDetail,
-		notifyRun:           params.NotifyRun,
-		notifyHelp:          params.NotifyHelp,
-		userAliasesFilename: params.UserAliasesFilename,
-		FlagKnownAs:         params.FlagKnownAs,
+		globalFlags:             params.GlobalFlags,
+		usagePrefix:             params.UsagePrefix,
+		missingCallback:         params.MissingCallback,
+		version:                 params.Version,
+		versionDetail:           params.VersionDetail,
+		notifyRun:               params.NotifyRun,
+		notifyHelp:              params.NotifyHelp,
+		userAliasesFilename:     params.UserAliasesFilename,
+		FlagKnownAs:             params.FlagKnownAs,
+		FlagDocumentationHidden: params.FlagDocumentationHidden,
 	}
 	command.init()
 	return command
@@ -192,7 +194,8 @@ type SuperCommand struct {
 	// will use that name when referring to an individual items/flags in this command.
 	// For example, if this value is 'option', the default message 'value for flag'
 	// will become 'value for option'.
-	FlagKnownAs string
+	FlagKnownAs             string
+	FlagDocumentationHidden bool
 }
 
 // IsSuperCommand implements Command.IsSuperCommand
@@ -218,8 +221,10 @@ func (c *SuperCommand) init() {
 	}
 	c.subcmds = map[string]commandReference{
 		"help": {command: c.help},
-		"documentation": {command: c.documentation,
-			name: "documentation"},
+		"documentation": {
+			command: c.documentation,
+			name:    "documentation",
+		},
 	}
 
 	if c.version != "" {

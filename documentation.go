@@ -201,28 +201,32 @@ func (c *documentationCommand) writeDocs(folder string, superCommands []string, 
 		if !printDefaultCommands && isDefaultCommand(name) {
 			continue
 		}
-		commandSeq := append(superCommands, name)
-		target := fmt.Sprintf("%s.md", strings.Join(commandSeq[1:], "_"))
-		target = strings.ReplaceAll(target, " ", "_")
-		target = filepath.Join(folder, target)
 
-		f, err := os.Create(target)
-		if err != nil {
-			return err
+		commandSeq := append(superCommands, name)
+
+		sc, isSuperCommand := ref.command.(*SuperCommand)
+		if !isSuperCommand || (isSuperCommand && !sc.FlagDocumentationHidden) {
+			target := fmt.Sprintf("%s.md", strings.Join(commandSeq[1:], "_"))
+			target = strings.ReplaceAll(target, " ", "_")
+			target = filepath.Join(folder, target)
+
+			f, err := os.Create(target)
+			if err != nil {
+				return err
+			}
+			writer := bufio.NewWriter(f)
+			formatted := c.formatCommand(ref, false, commandSeq)
+			_, err = writer.WriteString(formatted)
+			if err != nil {
+				return err
+			}
+			_ = writer.Flush()
+			_ = f.Close()
 		}
-		writer := bufio.NewWriter(f)
-		formatted := c.formatCommand(ref, false, commandSeq)
-		_, err = writer.WriteString(formatted)
-		if err != nil {
-			return err
-		}
-		writer.Flush()
-		f.Close()
 
 		// Handle subcommands
-		if sc, ok := ref.command.(*SuperCommand); ok {
-			err = sc.documentation.writeDocs(folder, commandSeq, false)
-			if err != nil {
+		if isSuperCommand {
+			if err := sc.documentation.writeDocs(folder, commandSeq, false); err != nil {
 				return err
 			}
 		}
@@ -277,15 +281,18 @@ func (c *documentationCommand) writeSections(w io.Writer, superCommands []string
 		}
 		ref := c.super.subcmds[name]
 		commandSeq := append(superCommands, name)
-		_, err := fmt.Fprintf(w, "%s", c.formatCommand(ref, true, commandSeq))
-		if err != nil {
-			return err
+
+		sc, isSuperCommand := ref.command.(*SuperCommand)
+		if !isSuperCommand || (isSuperCommand && !sc.FlagDocumentationHidden) {
+			_, err := fmt.Fprintf(w, "%s", c.formatCommand(ref, true, commandSeq))
+			if err != nil {
+				return err
+			}
 		}
 
 		// Handle subcommands
-		if sc, ok := ref.command.(*SuperCommand); ok {
-			err = sc.documentation.writeSections(w, commandSeq, false)
-			if err != nil {
+		if isSuperCommand {
+			if err := sc.documentation.writeSections(w, commandSeq, false); err != nil {
 				return err
 			}
 		}
