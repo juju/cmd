@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -151,6 +152,11 @@ func (c *documentationCommand) computeReverseAliases() {
 // dumpSeveralFiles is invoked when every command is dumped into
 // a separated entity
 func (c *documentationCommand) dumpSeveralFiles() error {
+	if len(c.super.subcmds) == 0 {
+		fmt.Printf("No commands found for %s", c.super.Name)
+		return nil
+	}
+
 	// Attempt to create output directory. This will fail if:
 	// - we don't have permission to create the dir
 	// - a file already exists at the given path
@@ -159,16 +165,6 @@ func (c *documentationCommand) dumpSeveralFiles() error {
 		return err
 	}
 
-	if len(c.super.subcmds) == 0 {
-		fmt.Printf("No commands found for %s", c.super.Name)
-		return nil
-	}
-
-	sorted := c.getSortedListCommands()
-	c.computeReverseAliases()
-
-	// if the ids were provided, we must have the same
-	// number of commands and ids
 	if c.idsPath != "" {
 		// get the list of ids
 		c.ids, err = c.readFileIds(c.idsPath)
@@ -186,31 +182,52 @@ func (c *documentationCommand) dumpSeveralFiles() error {
 		}
 
 		writer := bufio.NewWriter(f)
-		_, err = writer.WriteString(c.commandsIndex(sorted))
+		_, err = writer.WriteString(c.commandsIndex())
 		if err != nil {
 			return err
 		}
 		f.Close()
 	}
 
-	folder := c.out + "/%s.md"
-	for _, command := range sorted {
-		target := fmt.Sprintf(folder, command)
+	return c.writeDocs(c.out, []string{c.super.Name}, true)
+}
+
+// writeDocs (recursively) writes docs for all commands in the given folder.
+func (c *documentationCommand) writeDocs(folder string, superCommands []string, printDefaultCommands bool) error {
+	c.computeReverseAliases()
+
+	for name, ref := range c.super.subcmds {
+		if !printDefaultCommands && isDefaultCommand(name) {
+			continue
+		}
+		commandSeq := append(superCommands, name)
+		target := fmt.Sprintf("%s.md", strings.Join(commandSeq[1:], "_"))
+		target = strings.ReplaceAll(target, " ", "_")
+		target = filepath.Join(folder, target)
+
 		f, err := os.Create(target)
 		if err != nil {
 			return err
 		}
 		writer := bufio.NewWriter(f)
-		formatted := c.formatCommand(c.super.subcmds[command], false)
+		formatted := c.formatCommand(ref, false, commandSeq)
 		_, err = writer.WriteString(formatted)
 		if err != nil {
 			return err
 		}
 		writer.Flush()
 		f.Close()
+
+		// Handle subcommands
+		if sc, ok := ref.command.(*SuperCommand); ok {
+			err = sc.documentation.writeDocs(folder, commandSeq, false)
+			if err != nil {
+				return err
+			}
+		}
 	}
 
-	return err
+	return nil
 }
 
 func (c *documentationCommand) readFileIds(path string) (map[string]string, error) {
@@ -240,27 +257,58 @@ func (c *documentationCommand) dumpEntries(writer *bufio.Writer) error {
 		return nil
 	}
 
-	sorted := c.getSortedListCommands()
-
 	if !c.noIndex {
-		_, err := writer.WriteString(c.commandsIndex(sorted))
+		_, err := writer.WriteString(c.commandsIndex())
 		if err != nil {
 			return err
 		}
 	}
 
-	var err error
-	for _, nameCmd := range sorted {
-		_, err = writer.WriteString(c.formatCommand(c.super.subcmds[nameCmd], true))
+	return c.writeSections(writer, []string{c.super.Name}, true)
+}
+
+// writeSections (recursively) writes sections for all commands to the given file.
+func (c *documentationCommand) writeSections(writer *bufio.Writer, superCommands []string, printDefaultCommands bool) error {
+	sorted := c.getSortedListCommands()
+	for _, name := range sorted {
+		if !printDefaultCommands && isDefaultCommand(name) {
+			continue
+		}
+		ref := c.super.subcmds[name]
+		commandSeq := append(superCommands, name)
+		_, err := writer.WriteString(c.formatCommand(ref, true, commandSeq))
 		if err != nil {
 			return err
+		}
+
+		// Handle subcommands
+		if sc, ok := ref.command.(*SuperCommand); ok {
+			err = sc.documentation.writeSections(writer, commandSeq, false)
+			if err != nil {
+				return err
+			}
 		}
 	}
 	return nil
 }
 
-func (c *documentationCommand) commandsIndex(listCommands []string) string {
+func (c *documentationCommand) commandsIndex() string {
 	index := "# Index\n"
+
+	listCommands := c.getSortedListCommands()
+	for id, name := range listCommands {
+		if isDefaultCommand(name) {
+			continue
+		}
+		index += fmt.Sprintf("%d. [%s](%s)\n", id, name, c.linkForCommand(name))
+		// TODO: handle subcommands ??
+	}
+	index += "---\n\n"
+	return index
+}
+
+// Return the URL/location for the given command
+func (c *documentationCommand) linkForCommand(cmd string) string {
 	prefix := "#"
 	if c.ids != nil {
 		prefix = "/t/"
@@ -269,28 +317,22 @@ func (c *documentationCommand) commandsIndex(listCommands []string) string {
 		prefix = c.url + "/"
 	}
 
-	for id, name := range listCommands {
-		if name == "documentation" || name == "help" {
-			continue
-		}
-		target, err := c.getTargetCmd(name)
-		if err != nil {
-			fmt.Printf("[ERROR] command [%s] has no id, please add it to the list\n", name)
-		}
-		index += fmt.Sprintf("%d. [%s](%s%s)\n", id, name, prefix, target)
+	target, err := c.getTargetCmd(cmd)
+	if err != nil {
+		fmt.Printf("[ERROR] command [%s] has no id, please add it to the list\n", cmd)
+		return ""
 	}
-	index += "---\n\n"
-	return index
+	return prefix + target
 }
 
 // formatCommand returns a string representation of the information contained
 // by a command in Markdown format. The title param can be used to set
 // whether the command name should be a title or not. This is particularly
 // handy when splitting the commands in different files.
-func (c *documentationCommand) formatCommand(ref commandReference, title bool) string {
+func (c *documentationCommand) formatCommand(ref commandReference, title bool, commandSeq []string) string {
 	formatted := ""
 	if title {
-		formatted = "# " + strings.ToUpper(ref.name) + "\n"
+		formatted = "# " + strings.ToUpper(strings.Join(commandSeq[1:], " ")) + "\n"
 	}
 
 	var info *Info
@@ -338,9 +380,9 @@ func (c *documentationCommand) formatCommand(ref commandReference, title bool) s
 	// Usage
 	if strings.TrimSpace(info.Args) != "" {
 		formatted += fmt.Sprintf(`## Usage
-`+"```"+`%s %s [options] %s`+"```"+`
+`+"```"+`%s [options] %s`+"```"+`
 
-`, c.super.Name, info.Name, info.Args)
+`, strings.Join(commandSeq, " "), info.Args)
 	}
 
 	// Options
@@ -361,6 +403,7 @@ func (c *documentationCommand) formatCommand(ref commandReference, title bool) s
 		formatted += "## Details\n" + doc + "\n\n"
 	}
 
+	formatted += c.formatSubcommands(info.Subcommands, commandSeq)
 	formatted += "---\n\n"
 
 	return formatted
@@ -523,4 +566,28 @@ func EscapeMarkdown(raw string) string {
 	}
 
 	return escaped.String()
+}
+
+func (c *documentationCommand) formatSubcommands(subcommands map[string]string, commandSeq []string) string {
+	var output string
+
+	sorted := []string{}
+	for name := range subcommands {
+		if isDefaultCommand(name) {
+			continue
+		}
+		sorted = append(sorted, name)
+	}
+	sort.Strings(sorted)
+
+	if len(sorted) > 0 {
+		output += "## Subcommands\n"
+		for _, name := range sorted {
+			output += fmt.Sprintf("- [%s](%s)\n", name,
+				c.linkForCommand(strings.Join(append(commandSeq[1:], name), "_")))
+		}
+		output += "\n"
+	}
+
+	return output
 }

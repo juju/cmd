@@ -72,9 +72,10 @@ type SuperCommandParams struct {
 	// in the help output.
 	NotifyHelp func([]string)
 
-	Name    string
-	Purpose string
-	Doc     string
+	Name     string
+	Purpose  string
+	Doc      string
+	Examples string
 	// Log holds the Log value associated with the supercommand. If it's nil,
 	// no logging flags will be configured.
 	Log *Log
@@ -113,11 +114,12 @@ type FlagAdder interface {
 // the fully initialized structure.
 func NewSuperCommand(params SuperCommandParams) *SuperCommand {
 	command := &SuperCommand{
-		Name:    params.Name,
-		Purpose: params.Purpose,
-		Doc:     params.Doc,
-		Log:     params.Log,
-		Aliases: params.Aliases,
+		Name:     params.Name,
+		Purpose:  params.Purpose,
+		Doc:      params.Doc,
+		Examples: params.Examples,
+		Log:      params.Log,
+		Aliases:  params.Aliases,
 
 		globalFlags:         params.GlobalFlags,
 		usagePrefix:         params.UsagePrefix,
@@ -162,6 +164,7 @@ type SuperCommand struct {
 	Name                string
 	Purpose             string
 	Doc                 string
+	Examples            string
 	Log                 *Log
 	Aliases             []string
 	globalFlags         FlagAdder
@@ -330,27 +333,9 @@ func (c *SuperCommand) insert(value commandReference) {
 }
 
 // describeCommands returns a short description of each registered subcommand.
-func (c *SuperCommand) describeCommands(simple bool) string {
-	var lineFormat = "    %-*s - %s"
-	var outputFormat = "commands:\n%s"
-	if simple {
-		lineFormat = "%-*s  %s"
-		outputFormat = "%s"
-	}
-	cmds := make([]string, len(c.subcmds))
-	i := 0
-	longest := 0
-	for name := range c.subcmds {
-		if len(name) > longest {
-			longest = len(name)
-		}
-		cmds[i] = name
-		i++
-	}
-	sort.Strings(cmds)
-	var result []string
-	for _, name := range cmds {
-		action := c.subcmds[name]
+func (c *SuperCommand) describeCommands() map[string]string {
+	result := make(map[string]string, len(c.subcmds))
+	for name, action := range c.subcmds {
 		if deprecated, _ := action.Deprecated(); deprecated {
 			continue
 		}
@@ -359,9 +344,9 @@ func (c *SuperCommand) describeCommands(simple bool) string {
 		if action.alias != "" {
 			purpose = "Alias for '" + action.alias + "'."
 		}
-		result = append(result, fmt.Sprintf(lineFormat, longest, name, purpose))
+		result[name] = purpose
 	}
-	return fmt.Sprintf(outputFormat, strings.Join(result, "\n"))
+	return result
 }
 
 // Info returns a description of the currently selected subcommand, or of the
@@ -373,18 +358,13 @@ func (c *SuperCommand) Info() *Info {
 		info.FlagKnownAs = c.FlagKnownAs
 		return &info
 	}
-	docParts := []string{}
-	if doc := strings.TrimSpace(c.Doc); doc != "" {
-		docParts = append(docParts, doc)
-	}
-	if cmds := c.describeCommands(false); cmds != "" {
-		docParts = append(docParts, cmds)
-	}
 	return &Info{
 		Name:        c.Name,
 		Args:        "<command> ...",
 		Purpose:     c.Purpose,
-		Doc:         strings.Join(docParts, "\n\n"),
+		Doc:         strings.TrimSpace(c.Doc),
+		Subcommands: c.describeCommands(),
+		Examples:    c.Examples,
 		Aliases:     c.Aliases,
 		FlagKnownAs: c.FlagKnownAs,
 	}

@@ -386,6 +386,39 @@ command details
 `[1:])
 }
 
+func (s *CmdHelpSuite) TestSuperShowsSubcommands(c *gc.C) {
+	s.info.Subcommands = map[string]string{
+		"application": "Wait for an application to reach a specified state.",
+		"machine":     "Wait for a machine to reach a specified state.",
+		"model":       "Wait for a model to reach a specified state.",
+		"unit":        "Wait for a unit to reach a specified state.",
+	}
+
+	s.assertHelp(c, `
+Usage: verb [flags] <something>
+
+Summary:
+command purpose
+
+Flags:
+--five (= "")
+    option-doc
+--one (= "")
+    option-doc
+--three (= "")
+    option-doc
+
+Details:
+command details
+
+Subcommands:
+    application - Wait for an application to reach a specified state.
+    machine     - Wait for a machine to reach a specified state.
+    model       - Wait for a model to reach a specified state.
+    unit        - Wait for a unit to reach a specified state.
+`[1:])
+}
+
 type CmdDocumentationSuite struct {
 	testing.LoggingCleanupSuite
 

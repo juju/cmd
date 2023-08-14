@@ -95,6 +95,7 @@ insert details here...
 			t.command,
 			&cmd.SuperCommand{Name: "juju"},
 			t.title,
+			[]string{"juju", t.command.Info().Name},
 		)
 		c.Check(output, gc.Equals, t.expected)
 	}
