@@ -101,8 +101,16 @@ type SuperCommandParams struct {
 	// will use that name when referring to an individual items/flags in this command.
 	// For example, if this value is 'option', the default message 'value for flag'
 	// will become 'value for option'.
-	FlagKnownAs             string
-	FlagDocumentationHidden bool
+	FlagKnownAs string
+
+	// SkipCommandDoc is used to skip over the super command documentation.
+	// This is useful when the super command is used as a wrapper for other
+	// commands, and the documentation is not relevant to the output of the
+	// documentation.
+	// TODO (stickupkid): Remove this. This shouldn't be here, but the
+	// documentation command is at the wrong abstraction, so we need to
+	// hack around it.
+	SkipCommandDoc bool
 }
 
 // FlagAdder represents a value that has associated flags.
@@ -122,16 +130,16 @@ func NewSuperCommand(params SuperCommandParams) *SuperCommand {
 		Log:      params.Log,
 		Aliases:  params.Aliases,
 
-		globalFlags:             params.GlobalFlags,
-		usagePrefix:             params.UsagePrefix,
-		missingCallback:         params.MissingCallback,
-		version:                 params.Version,
-		versionDetail:           params.VersionDetail,
-		notifyRun:               params.NotifyRun,
-		notifyHelp:              params.NotifyHelp,
-		userAliasesFilename:     params.UserAliasesFilename,
-		FlagKnownAs:             params.FlagKnownAs,
-		FlagDocumentationHidden: params.FlagDocumentationHidden,
+		globalFlags:         params.GlobalFlags,
+		usagePrefix:         params.UsagePrefix,
+		missingCallback:     params.MissingCallback,
+		version:             params.Version,
+		versionDetail:       params.VersionDetail,
+		notifyRun:           params.NotifyRun,
+		notifyHelp:          params.NotifyHelp,
+		userAliasesFilename: params.UserAliasesFilename,
+		FlagKnownAs:         params.FlagKnownAs,
+		SkipCommandDoc:      params.SkipCommandDoc,
 	}
 	command.init()
 	return command
@@ -194,8 +202,16 @@ type SuperCommand struct {
 	// will use that name when referring to an individual items/flags in this command.
 	// For example, if this value is 'option', the default message 'value for flag'
 	// will become 'value for option'.
-	FlagKnownAs             string
-	FlagDocumentationHidden bool
+	FlagKnownAs string
+
+	// SkipCommandDoc is used to skip over the super command documentation.
+	// This is useful when the super command is used as a wrapper for other
+	// commands, and the documentation is not relevant to the output of the
+	// documentation.
+	// TODO (stickupkid): Remove this. This shouldn't be here, but the
+	// documentation command is at the wrong abstraction, so we need to
+	// hack around it.
+	SkipCommandDoc bool
 }
 
 // IsSuperCommand implements Command.IsSuperCommand

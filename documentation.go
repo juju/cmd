@@ -205,7 +205,7 @@ func (c *documentationCommand) writeDocs(folder string, superCommands []string, 
 		commandSeq := append(superCommands, name)
 
 		sc, isSuperCommand := ref.command.(*SuperCommand)
-		if !isSuperCommand || (isSuperCommand && !sc.FlagDocumentationHidden) {
+		if !isSuperCommand || (isSuperCommand && !sc.SkipCommandDoc) {
 			target := fmt.Sprintf("%s.md", strings.Join(commandSeq[1:], "_"))
 			target = strings.ReplaceAll(target, " ", "_")
 			target = filepath.Join(folder, target)
@@ -283,7 +283,7 @@ func (c *documentationCommand) writeSections(w io.Writer, superCommands []string
 		commandSeq := append(superCommands, name)
 
 		sc, isSuperCommand := ref.command.(*SuperCommand)
-		if !isSuperCommand || (isSuperCommand && !sc.FlagDocumentationHidden) {
+		if !isSuperCommand || (isSuperCommand && !sc.SkipCommandDoc) {
 			_, err := fmt.Fprintf(w, "%s", c.formatCommand(ref, true, commandSeq))
 			if err != nil {
 				return err
