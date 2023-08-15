@@ -207,31 +207,39 @@ func (c *documentationCommand) writeDocs(folder string, superCommands []string, 
 		sc, isSuperCommand := ref.command.(*SuperCommand)
 		if !isSuperCommand || (isSuperCommand && !sc.SkipCommandDoc) {
 			target := fmt.Sprintf("%s.md", strings.Join(commandSeq[1:], "_"))
-			target = strings.ReplaceAll(target, " ", "_")
-			target = filepath.Join(folder, target)
-
-			f, err := os.Create(target)
-			if err != nil {
+			if err := c.writeDoc(folder, target, ref, commandSeq); err != nil {
 				return err
 			}
-			writer := bufio.NewWriter(f)
-			formatted := c.formatCommand(ref, false, commandSeq)
-			_, err = writer.WriteString(formatted)
-			if err != nil {
-				return err
-			}
-			_ = writer.Flush()
-			_ = f.Close()
 		}
 
 		// Handle subcommands
-		if isSuperCommand {
-			if err := sc.documentation.writeDocs(folder, commandSeq, false); err != nil {
-				return err
-			}
+		if !isSuperCommand {
+			continue
+		}
+
+		if err := sc.documentation.writeDocs(folder, commandSeq, false); err != nil {
+			return err
 		}
 	}
 
+	return nil
+}
+
+func (c *documentationCommand) writeDoc(folder, target string, ref commandReference, commandSeq []string) error {
+	target = strings.ReplaceAll(target, " ", "_")
+	target = filepath.Join(folder, target)
+
+	f, err := os.Create(target)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = f.Close() }()
+
+	formatted := c.formatCommand(ref, false, commandSeq)
+	if _, err = fmt.Fprintln(f, formatted); err != nil {
+		return err
+	}
+	_ = f.Sync()
 	return nil
 }
 
@@ -282,19 +290,21 @@ func (c *documentationCommand) writeSections(w io.Writer, superCommands []string
 		ref := c.super.subcmds[name]
 		commandSeq := append(superCommands, name)
 
+		// This is a bit messy, because we want to keep the order of the
+		// documentation the same.
 		sc, isSuperCommand := ref.command.(*SuperCommand)
 		if !isSuperCommand || (isSuperCommand && !sc.SkipCommandDoc) {
-			_, err := fmt.Fprintf(w, "%s", c.formatCommand(ref, true, commandSeq))
-			if err != nil {
+			if _, err := fmt.Fprintf(w, "%s", c.formatCommand(ref, true, commandSeq)); err != nil {
 				return err
 			}
 		}
 
 		// Handle subcommands
-		if isSuperCommand {
-			if err := sc.documentation.writeSections(w, commandSeq, false); err != nil {
-				return err
-			}
+		if !isSuperCommand {
+			continue
+		}
+		if err := sc.documentation.writeSections(w, commandSeq, false); err != nil {
+			return err
 		}
 	}
 	return nil
