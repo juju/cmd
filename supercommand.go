@@ -102,6 +102,15 @@ type SuperCommandParams struct {
 	// For example, if this value is 'option', the default message 'value for flag'
 	// will become 'value for option'.
 	FlagKnownAs string
+
+	// SkipCommandDoc is used to skip over the super command documentation.
+	// This is useful when the super command is used as a wrapper for other
+	// commands, and the documentation is not relevant to the output of the
+	// documentation.
+	// TODO (stickupkid): Remove this. This shouldn't be here, but the
+	// documentation command is at the wrong abstraction, so we need to
+	// hack around it.
+	SkipCommandDoc bool
 }
 
 // FlagAdder represents a value that has associated flags.
@@ -130,6 +139,7 @@ func NewSuperCommand(params SuperCommandParams) *SuperCommand {
 		notifyHelp:          params.NotifyHelp,
 		userAliasesFilename: params.UserAliasesFilename,
 		FlagKnownAs:         params.FlagKnownAs,
+		SkipCommandDoc:      params.SkipCommandDoc,
 	}
 	command.init()
 	return command
@@ -193,6 +203,15 @@ type SuperCommand struct {
 	// For example, if this value is 'option', the default message 'value for flag'
 	// will become 'value for option'.
 	FlagKnownAs string
+
+	// SkipCommandDoc is used to skip over the super command documentation.
+	// This is useful when the super command is used as a wrapper for other
+	// commands, and the documentation is not relevant to the output of the
+	// documentation.
+	// TODO (stickupkid): Remove this. This shouldn't be here, but the
+	// documentation command is at the wrong abstraction, so we need to
+	// hack around it.
+	SkipCommandDoc bool
 }
 
 // IsSuperCommand implements Command.IsSuperCommand
@@ -218,8 +237,10 @@ func (c *SuperCommand) init() {
 	}
 	c.subcmds = map[string]commandReference{
 		"help": {command: c.help},
-		"documentation": {command: c.documentation,
-			name: "documentation"},
+		"documentation": {
+			command: c.documentation,
+			name:    "documentation",
+		},
 	}
 
 	if c.version != "" {
