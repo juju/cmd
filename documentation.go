@@ -501,7 +501,9 @@ func (d *documentationCommand) formatFlags(c Command, info *Info) string {
 			theFlags += fmt.Sprintf("`--%s`", f.Name)
 		}
 		formatted += fmt.Sprintf("| %s | %s | %s |\n", theFlags,
-			EscapeMarkdown(fs[0].DefValue), EscapeMarkdown(fs[0].Usage))
+			EscapeMarkdown(fs[0].DefValue),
+			strings.ReplaceAll(EscapeMarkdown(fs[0].Usage), "\n", " "),
+		)
 	}
 	return formatted
 }
