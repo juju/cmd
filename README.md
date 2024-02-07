@@ -1,6 +1,6 @@
 
 # cmd
-    import "github.com/juju/cmd/v3"
+    import "github.com/juju/cmd/v4"
 
 
 

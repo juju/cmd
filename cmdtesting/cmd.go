@@ -11,7 +11,7 @@ import (
 	"github.com/juju/gnuflag"
 	gc "gopkg.in/check.v1"
 
-	"github.com/juju/cmd/v3"
+	"github.com/juju/cmd/v4"
 )
 
 // NewFlagSet creates a new flag set using the standard options, particularly
@@ -43,7 +43,7 @@ func Context(c *gc.C) *cmd.Context {
 		Stdout: &bytes.Buffer{},
 		Stderr: &bytes.Buffer{},
 	}
-	ctx.Context = context.TODO()
+	ctx.Context = context.Background()
 	return ctx
 }
 
@@ -56,7 +56,7 @@ func ContextForDir(c *gc.C, dir string) *cmd.Context {
 		Stdout: &bytes.Buffer{},
 		Stderr: &bytes.Buffer{},
 	}
-	ctx.Context = context.TODO()
+	ctx.Context = context.Background()
 	return ctx
 }
 

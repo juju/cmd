@@ -10,8 +10,8 @@ import (
 
 	"github.com/juju/ansiterm"
 	"github.com/juju/gnuflag"
-	"github.com/juju/loggo"
-	"github.com/juju/loggo/loggocolor"
+	"github.com/juju/loggo/v2"
+	"github.com/juju/loggo/v2/loggocolor"
 )
 
 // Log supplies the necessary functionality for Commands that wish to set up
@@ -104,8 +104,7 @@ func (log *Log) Start(ctx *Context) error {
 	root := loggo.GetLogger("")
 	root.SetLogLevel(level)
 	// Override the logging config with specified logging config.
-	loggo.ConfigureLoggers(log.Config)
-	return nil
+	return loggo.ConfigureLoggers(log.Config)
 }
 
 // NewCommandLogWriter creates a loggo writer for registration
