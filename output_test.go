@@ -5,12 +5,12 @@ package cmd_test
 
 import (
 	"github.com/juju/gnuflag"
-	"github.com/juju/loggo"
+	"github.com/juju/loggo/v2"
 	"github.com/juju/testing"
 	gc "gopkg.in/check.v1"
 
-	"github.com/juju/cmd/v3"
-	"github.com/juju/cmd/v3/cmdtesting"
+	"github.com/juju/cmd/v4"
+	"github.com/juju/cmd/v4/cmdtesting"
 )
 
 // OutputCommand is a command that uses the output.go formatters.

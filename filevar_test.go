@@ -13,11 +13,11 @@ import (
 	"github.com/juju/gnuflag"
 	gitjujutesting "github.com/juju/testing"
 	jc "github.com/juju/testing/checkers"
-	"github.com/juju/utils/v3"
+	"github.com/juju/utils/v4"
 	gc "gopkg.in/check.v1"
 
-	"github.com/juju/cmd/v3"
-	"github.com/juju/cmd/v3/cmdtesting"
+	"github.com/juju/cmd/v4"
+	"github.com/juju/cmd/v4/cmdtesting"
 )
 
 type FileVarSuite struct {

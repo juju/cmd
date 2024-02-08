@@ -7,12 +7,12 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
-	"github.com/juju/cmd/v3/cmdtesting"
-	"github.com/juju/loggo"
+	"github.com/juju/loggo/v2"
 	"github.com/juju/testing"
 	gc "gopkg.in/check.v1"
 
-	"github.com/juju/cmd/v3"
+	"github.com/juju/cmd/v4"
+	"github.com/juju/cmd/v4/cmdtesting"
 )
 
 var logger = loggo.GetLogger("juju.test")

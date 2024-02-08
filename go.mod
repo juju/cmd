@@ -1,30 +1,31 @@
-module github.com/juju/cmd/v3
+module github.com/juju/cmd/v4
 
-go 1.17
+go 1.21
+
+toolchain go1.21.6
 
 require (
-	github.com/juju/ansiterm v0.0.0-20210706145210-9283cdf370b5
-	github.com/juju/errors v0.0.0-20220203013757-bd733f3c86b9
-	github.com/juju/gnuflag v0.0.0-20171113085948-2ce1bb71843d
-	github.com/juju/loggo v0.0.0-20210728185423-eebad3a902c4
-	github.com/juju/testing v0.0.0-20220203020004-a0ff61f03494
-	github.com/juju/utils/v3 v3.0.0-20220203023959-c3fbc78a33b0
+	github.com/juju/ansiterm v1.0.0
+	github.com/juju/errors v1.0.0
+	github.com/juju/gnuflag v1.0.0
+	github.com/juju/loggo/v2 v2.0.0
+	github.com/juju/testing v1.2.0
+	github.com/juju/utils/v4 v4.0.0
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c
 	gopkg.in/yaml.v2 v2.4.0
 )
 
 require (
-	github.com/juju/clock v0.0.0-20220203021603-d9deb868a28a // indirect
-	github.com/juju/collections v0.0.0-20220203020748-febd7cad8a7a // indirect
-	github.com/juju/mgo/v2 v2.0.0-20210302023703-70d5d206e208 // indirect
-	github.com/juju/retry v0.0.0-20180821225755-9058e192b216 // indirect
-	github.com/juju/version/v2 v2.0.0-20211007103408-2e8da085dc23 // indirect
-	github.com/kr/pretty v0.2.1 // indirect
+	github.com/juju/clock v1.0.3 // indirect
+	github.com/juju/loggo v1.0.0 // indirect
+	github.com/juju/utils/v3 v3.1.0 // indirect
+	github.com/kr/pretty v0.3.1 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/lunixbochs/vtclean v1.0.0 // indirect
-	github.com/mattn/go-colorable v0.1.8 // indirect
-	github.com/mattn/go-isatty v0.0.13 // indirect
-	golang.org/x/crypto v0.1.0 // indirect
-	golang.org/x/net v0.7.0 // indirect
-	golang.org/x/sys v0.5.0 // indirect
+	github.com/mattn/go-colorable v0.1.10 // indirect
+	github.com/mattn/go-isatty v0.0.14 // indirect
+	github.com/rogpeppe/go-internal v1.9.0 // indirect
+	golang.org/x/crypto v0.19.0 // indirect
+	golang.org/x/net v0.21.0 // indirect
+	golang.org/x/sys v0.17.0 // indirect
 )

@@ -11,7 +11,7 @@ import (
 
 	"github.com/juju/gnuflag"
 
-	"github.com/juju/cmd/v3"
+	"github.com/juju/cmd/v4"
 )
 
 func bufferString(stream io.Writer) string {
