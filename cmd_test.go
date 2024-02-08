@@ -13,6 +13,7 @@ import (
 
 	"github.com/juju/loggo/v2"
 	jc "github.com/juju/testing/checkers"
+	"github.com/juju/utils/v4"
 	gc "gopkg.in/check.v1"
 
 	"github.com/juju/gnuflag"
@@ -214,7 +215,7 @@ func (s *CmdSuite) TestZeroOrOneArgs(c *gc.C) {
 
 func (s *CmdSuite) TestIsErrSilent(c *gc.C) {
 	c.Assert(cmd.IsErrSilent(cmd.ErrSilent), gc.Equals, true)
-	c.Assert(cmd.IsErrSilent(cmd.NewRcPassthroughError(99)), gc.Equals, true)
+	c.Assert(cmd.IsErrSilent(utils.NewRcPassthroughError(99)), gc.Equals, true)
 	c.Assert(cmd.IsErrSilent(fmt.Errorf("noisy")), gc.Equals, false)
 }
 

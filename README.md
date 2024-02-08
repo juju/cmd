@@ -67,7 +67,7 @@ func IsErrSilent(err error) bool
 IsErrSilent returns whether the error should be logged from cmd.Main.
 
 
-## func IsRcPassthroughError
+## func utils.IsRcPassthroughError
 ``` go
 func IsRcPassthroughError(err error) bool
 ```
@@ -92,7 +92,7 @@ by the callers of a command. This way the logged output can also
 be displayed otherwise, e.g. on the screen.
 
 
-## func NewRcPassthroughError
+## func utils.NewRcPassthroughError
 ``` go
 func NewRcPassthroughError(code int) error
 ```
@@ -628,7 +628,7 @@ Write formats and outputs the value as directed by the --format and
 
 
 
-## type RcPassthroughError
+## type utils.RcPassthroughError
 ``` go
 type RcPassthroughError struct {
     Code int

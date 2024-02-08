@@ -12,6 +12,7 @@ import (
 	"github.com/juju/errors"
 	"github.com/juju/gnuflag"
 	"github.com/juju/loggo/v2"
+	"github.com/juju/utils/v4"
 )
 
 var logger = loggo.GetLogger("cmd")
@@ -549,7 +550,7 @@ func (c *SuperCommand) Run(ctx *Context) error {
 		logger.Debugf("error stack: \n%v", errors.ErrorStack(err))
 
 		// Err has been logged above, we can make the err silent so it does not log again in cmd/main
-		if !IsRcPassthroughError(err) {
+		if !utils.IsRcPassthroughError(err) {
 			err = ErrSilent
 		}
 	} else {

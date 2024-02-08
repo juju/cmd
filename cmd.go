@@ -22,30 +22,6 @@ import (
 	"github.com/juju/utils/v4"
 )
 
-// RcPassthroughError indicates that a Juju plugin command exited with a
-// non-zero exit code. This error is used to exit with the return code.
-type RcPassthroughError struct {
-	Code int
-}
-
-// Error implements error.
-func (e *RcPassthroughError) Error() string {
-	return fmt.Sprintf("subprocess encountered error code %v", e.Code)
-}
-
-// IsRcPassthroughError returns whether the error is an RcPassthroughError.
-func IsRcPassthroughError(err error) bool {
-	_, ok := err.(*RcPassthroughError)
-	return ok
-}
-
-// NewRcPassthroughError creates an error that will have the code used at the
-// return code from the cmd.Main function rather than the default of 1 if
-// there is an error.
-func NewRcPassthroughError(code int) error {
-	return &RcPassthroughError{code}
-}
-
 // ErrSilent can be returned from Run to signal that Main should exit with
 // code 1 without producing error output.
 var ErrSilent = errors.New("cmd: error out silently")
@@ -55,7 +31,7 @@ func IsErrSilent(err error) bool {
 	if err == ErrSilent {
 		return true
 	}
-	if _, ok := err.(*RcPassthroughError); ok {
+	if utils.IsRcPassthroughError(err) {
 		return true
 	}
 	return false
@@ -466,8 +442,8 @@ func Main(c Command, ctx *Context, args []string) int {
 		return rc
 	}
 	if err := c.Run(ctx); err != nil {
-		if IsRcPassthroughError(err) {
-			return err.(*RcPassthroughError).Code
+		if utils.IsRcPassthroughError(err) {
+			return err.(*utils.RcPassthroughError).Code
 		}
 		if err != ErrSilent {
 			WriteError(ctx.Stderr, err)
