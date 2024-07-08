@@ -26,7 +26,7 @@ This command generates a markdown formatted document with all the commands, thei
 `
 
 var documentationExamples = `
-    juju documentation
+	juju documentation
 	juju documentation --split 
 	juju documentation --split --no-index --out /tmp/docs
 	
@@ -493,14 +493,18 @@ func (d *documentationCommand) formatFlags(c Command, info *Info) string {
 	formatted := "| Flag | Default | Usage |\n"
 	formatted += "| --- | --- | --- |\n"
 	for _, fs := range byName {
-		theFlags := ""
+		formattedFlags := ""
 		for i, f := range fs {
 			if i > 0 {
-				theFlags += ", "
+				formattedFlags += ", "
 			}
-			theFlags += fmt.Sprintf("`--%s`", f.Name)
+			if len(f.Name) == 1 {
+				formattedFlags += fmt.Sprintf("`-%s`", f.Name)
+			} else {
+				formattedFlags += fmt.Sprintf("`--%s`", f.Name)
+			}
 		}
-		formatted += fmt.Sprintf("| %s | %s | %s |\n", theFlags,
+		formatted += fmt.Sprintf("| %s | %s | %s |\n", formattedFlags,
 			EscapeMarkdown(fs[0].DefValue),
 			strings.ReplaceAll(EscapeMarkdown(fs[0].Usage), "\n", " "),
 		)

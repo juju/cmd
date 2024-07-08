@@ -30,7 +30,7 @@ func (s *documentationSuite) TestFormatCommand(c *gc.C) {
 				SeeAlso:  []string{"clouds", "update-cloud", "remove-cloud", "update-credential"},
 				Aliases:  []string{"cloud-add", "import-cloud"},
 			},
-			flags: []string{"force", "format", "output"},
+			flags: []testFlag{{name: "force", short: "f"}, {name: "format" /* no short flag */}, {name: "output", short: "o"}},
 		},
 		title: false,
 		expected: (`
@@ -45,9 +45,9 @@ summary for add-cloud...
 ### Options
 | Flag | Default | Usage |
 | --- | --- | --- |
-| ` + "`" + `--force` + "`" + ` | default value for "force" flag | description for "force" flag |
+| ` + "`" + `-f` + "`" + `, ` + "`" + `--force` + "`" + ` | default value for "force" flag | description for "force" flag |
 | ` + "`" + `--format` + "`" + ` | default value for "format" flag | description for "format" flag |
-| ` + "`" + `--output` + "`" + ` | default value for "output" flag | description for "output" flag |
+| ` + "`" + `-o` + "`" + `, ` + "`" + `--output` + "`" + ` | default value for "output" flag | description for "output" flag |
 
 ## Examples
 examples for add-cloud...
@@ -68,7 +68,7 @@ details for add-cloud...
 				Doc:      "insert details here...",
 				Examples: "insert examples here...",
 			},
-			flags: []string{},
+			flags: []testFlag{},
 		},
 		title: false,
 		expected: (`
@@ -105,7 +105,13 @@ insert details here...
 // documentation output.
 type docTestCommand struct {
 	info  *cmd.Info
-	flags []string
+	flags []testFlag
+}
+
+// testFlag is a definition for flag in test. It allows to provide an optional short name for the flag
+type testFlag struct {
+	name  string
+	short string // optional
 }
 
 func (c *docTestCommand) Info() *cmd.Info {
@@ -114,9 +120,17 @@ func (c *docTestCommand) Info() *cmd.Info {
 
 func (c *docTestCommand) SetFlags(f *gnuflag.FlagSet) {
 	for _, flag := range c.flags {
-		f.String(flag,
-			fmt.Sprintf("default value for %q flag", flag),
-			fmt.Sprintf("description for %q flag", flag))
+		var fakeValue string
+		defaultValue := fmt.Sprintf("default value for %q flag", flag.name)
+		description := fmt.Sprintf("description for %q flag", flag.name)
+		f.StringVar(&fakeValue, flag.name,
+			defaultValue,
+			description)
+		if flag.short != "" {
+			f.StringVar(&fakeValue, flag.short,
+				defaultValue,
+				description)
+		}
 	}
 }
 
