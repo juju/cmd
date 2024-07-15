@@ -473,7 +473,10 @@ func (d *documentationCommand) formatFlags(c Command, info *Info) string {
 		c.SetFlags(f)
 	}
 
-	// group together all flags for a given value
+	// group together all flags for a given value, meaning that flag which sets the same value are
+	// grouped together and displayed with the same description, as below:
+	//
+	// -s, --short, --alternate-string | default value | some description.
 	flags := make(map[interface{}]flagsByLength)
 	f.VisitAll(func(f *gnuflag.Flag) {
 		flags[f.Value] = append(flags[f.Value], f)
@@ -483,6 +486,9 @@ func (d *documentationCommand) formatFlags(c Command, info *Info) string {
 	}
 
 	// sort the output flags by shortest name for each group.
+	// Caution: this mean that description/default value displayed in documentation will
+	// be the one of the shortest alias. Other will be discarded. Be careful to have the same default
+	// values between each alias, and put the description on the shortest alias.
 	var byName flagsByName
 	for _, fl := range flags {
 		sort.Sort(fl)
@@ -493,6 +499,7 @@ func (d *documentationCommand) formatFlags(c Command, info *Info) string {
 	formatted := "| Flag | Default | Usage |\n"
 	formatted += "| --- | --- | --- |\n"
 	for _, fs := range byName {
+		// Collect all flag aliases (usually a short one and a plain one, like -v / --verbose)
 		formattedFlags := ""
 		for i, f := range fs {
 			if i > 0 {
@@ -504,6 +511,8 @@ func (d *documentationCommand) formatFlags(c Command, info *Info) string {
 				formattedFlags += fmt.Sprintf("`--%s`", f.Name)
 			}
 		}
+		// display all the flags aliases and the default value and description of the shortest one.
+		// Escape Markdown in description in order to display it cleanly in the final documentation.
 		formatted += fmt.Sprintf("| %s | %s | %s |\n", formattedFlags,
 			EscapeMarkdown(fs[0].DefValue),
 			strings.ReplaceAll(EscapeMarkdown(fs[0].Usage), "\n", " "),
