@@ -26,27 +26,27 @@ This command generates a markdown formatted document with all the commands, thei
 `
 
 var documentationExamples = `
-	juju documentation
-	juju documentation --split 
-	juju documentation --split --no-index --out /tmp/docs
-	
-	To render markdown documentation using a list of existing
-	commands, you can use a file with the following syntax
-	
-	command1: id1
-	command2: id2
-	commandN: idN
+    juju documentation
+    juju documentation --split 
+    juju documentation --split --no-index --out /tmp/docs
 
-	For example:
+To render markdown documentation using a list of existing
+commands, you can use a file with the following syntax
 
-	add-cloud: 1183
-	add-secret: 1284
-	remove-cloud: 4344
+    command1: id1
+    command2: id2
+    commandN: idN
 
-	Then, the urls will be populated using the ids indicated
-	in the file above.
+For example:
 
-	juju documentation --split --no-index --out /tmp/docs --discourse-ids /tmp/docs/myids
+    add-cloud: 1183
+    add-secret: 1284
+    remove-cloud: 4344
+
+Then, the urls will be populated using the ids indicated
+in the file above.
+
+    juju documentation --split --no-index --out /tmp/docs --discourse-ids /tmp/docs/myids
 `
 
 type documentationCommand struct {
