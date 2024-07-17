@@ -27,26 +27,26 @@ This command generates a markdown formatted document with all the commands, thei
 
 var documentationExamples = `
     juju documentation
-	juju documentation --split 
-	juju documentation --split --no-index --out /tmp/docs
-	
-	To render markdown documentation using a list of existing
-	commands, you can use a file with the following syntax
-	
-	command1: id1
-	command2: id2
-	commandN: idN
+    juju documentation --split 
+    juju documentation --split --no-index --out /tmp/docs
 
-	For example:
+To render markdown documentation using a list of existing
+commands, you can use a file with the following syntax
 
-	add-cloud: 1183
-	add-secret: 1284
-	remove-cloud: 4344
+    command1: id1
+    command2: id2
+    commandN: idN
 
-	Then, the urls will be populated using the ids indicated
-	in the file above.
+For example:
 
-	juju documentation --split --no-index --out /tmp/docs --discourse-ids /tmp/docs/myids
+    add-cloud: 1183
+    add-secret: 1284
+    remove-cloud: 4344
+
+Then, the urls will be populated using the ids indicated
+in the file above.
+
+    juju documentation --split --no-index --out /tmp/docs --discourse-ids /tmp/docs/myids
 `
 
 type documentationCommand struct {
@@ -473,7 +473,10 @@ func (d *documentationCommand) formatFlags(c Command, info *Info) string {
 		c.SetFlags(f)
 	}
 
-	// group together all flags for a given value
+	// group together all flags for a given value, meaning that flag which sets the same value are
+	// grouped together and displayed with the same description, as below:
+	//
+	// -s, --short, --alternate-string | default value | some description.
 	flags := make(map[interface{}]flagsByLength)
 	f.VisitAll(func(f *gnuflag.Flag) {
 		flags[f.Value] = append(flags[f.Value], f)
@@ -483,6 +486,9 @@ func (d *documentationCommand) formatFlags(c Command, info *Info) string {
 	}
 
 	// sort the output flags by shortest name for each group.
+	// Caution: this mean that description/default value displayed in documentation will
+	// be the one of the shortest alias. Other will be discarded. Be careful to have the same default
+	// values between each alias, and put the description on the shortest alias.
 	var byName flagsByName
 	for _, fl := range flags {
 		sort.Sort(fl)
@@ -493,14 +499,21 @@ func (d *documentationCommand) formatFlags(c Command, info *Info) string {
 	formatted := "| Flag | Default | Usage |\n"
 	formatted += "| --- | --- | --- |\n"
 	for _, fs := range byName {
-		theFlags := ""
+		// Collect all flag aliases (usually a short one and a plain one, like -v / --verbose)
+		formattedFlags := ""
 		for i, f := range fs {
 			if i > 0 {
-				theFlags += ", "
+				formattedFlags += ", "
 			}
-			theFlags += fmt.Sprintf("`--%s`", f.Name)
+			if len(f.Name) == 1 {
+				formattedFlags += fmt.Sprintf("`-%s`", f.Name)
+			} else {
+				formattedFlags += fmt.Sprintf("`--%s`", f.Name)
+			}
 		}
-		formatted += fmt.Sprintf("| %s | %s | %s |\n", theFlags,
+		// display all the flags aliases and the default value and description of the shortest one.
+		// Escape Markdown in description in order to display it cleanly in the final documentation.
+		formatted += fmt.Sprintf("| %s | %s | %s |\n", formattedFlags,
 			EscapeMarkdown(fs[0].DefValue),
 			strings.ReplaceAll(EscapeMarkdown(fs[0].Usage), "\n", " "),
 		)
