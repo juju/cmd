@@ -182,10 +182,9 @@ func (c *documentationCommand) dumpSeveralFiles() error {
 			return err
 		}
 
-		writer := bufio.NewWriter(f)
-		_, err = writer.WriteString(c.commandsIndex())
+		err = c.writeIndex(f)
 		if err != nil {
-			return err
+			return fmt.Errorf("writing index: %w", err)
 		}
 		f.Close()
 	}
@@ -271,9 +270,9 @@ func (c *documentationCommand) dumpEntries(w io.Writer) error {
 	}
 
 	if !c.noIndex {
-		_, err := fmt.Fprintf(w, "%s", c.commandsIndex())
+		err := c.writeIndex(w)
 		if err != nil {
-			return err
+			return fmt.Errorf("writing index: %w", err)
 		}
 	}
 
@@ -310,19 +309,26 @@ func (c *documentationCommand) writeSections(w io.Writer, superCommands []string
 	return nil
 }
 
-func (c *documentationCommand) commandsIndex() string {
-	index := "# Index\n"
+// writeIndex writes the command index to the specified writer.
+func (c *documentationCommand) writeIndex(w io.Writer) error {
+	_, err := fmt.Fprintf(w, "# Index\n")
+	if err != nil {
+		return err
+	}
 
 	listCommands := c.getSortedListCommands()
 	for id, name := range listCommands {
 		if isDefaultCommand(name) {
 			continue
 		}
-		index += fmt.Sprintf("%d. [%s](%s)\n", id, name, c.linkForCommand(name))
+		_, err = fmt.Fprintf(w, "%d. [%s](%s)\n", id, name, c.linkForCommand(name))
+		if err != nil {
+			return err
+		}
 		// TODO: handle subcommands ??
 	}
-	index += "---\n\n"
-	return index
+	_, err = fmt.Fprintf(w, "---\n\n")
+	return err
 }
 
 // Return the URL/location for the given command
