@@ -2,6 +2,8 @@ package cmd_test
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 
 	"github.com/juju/gnuflag"
 	gc "gopkg.in/check.v1"
@@ -208,4 +210,25 @@ formatted YAML-formatted file.
 	for _, t := range tests {
 		c.Check(cmd.EscapeMarkdown(t.input), gc.Equals, t.output)
 	}
+}
+
+// TestWriteIndex checks that the index file is successfully written.
+func (*documentationSuite) TestWriteIndex(c *gc.C) {
+	// Make temp dir to hold docs
+	docsDir := c.MkDir()
+
+	// Create a supercommand and run the documentation command
+	superCmd := cmd.NewSuperCommand(cmd.SuperCommandParams{})
+	superCmd.SetFlags(&gnuflag.FlagSet{})
+	err := superCmd.Init([]string{"documentation", "--split", "--out", docsDir})
+	c.Assert(err, gc.IsNil)
+	err = superCmd.Run(&cmd.Context{})
+	c.Assert(err, gc.IsNil)
+
+	// Check the index file
+	indexPath := filepath.Join(docsDir, "index.md")
+	indexContents, err := os.ReadFile(indexPath)
+	c.Assert(err, gc.IsNil)
+	// Index should be non-empty
+	c.Assert(string(indexContents), gc.Matches, "(?m).*Index.*")
 }
