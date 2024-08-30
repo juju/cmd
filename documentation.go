@@ -5,6 +5,7 @@ package cmd
 
 import (
 	"bufio"
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -354,83 +355,35 @@ func (c *documentationCommand) linkForCommand(cmd string) string {
 // whether the command name should be a title or not. This is particularly
 // handy when splitting the commands in different files.
 func (c *documentationCommand) formatCommand(ref commandReference, title bool, commandSeq []string) string {
-	formatted := ""
+	var fmtedTitle string
 	if title {
-		formatted = "# " + strings.ToUpper(strings.Join(commandSeq[1:], " ")) + "\n"
+		fmtedTitle = strings.ToUpper(strings.Join(commandSeq[1:], " "))
 	}
 
-	var info *Info
-	if ref.name == "documentation" {
-		info = c.Info()
-	} else {
-		info = ref.command.Info()
-	}
+	var buf bytes.Buffer
+	PrintMarkdown(&buf, ref.command, MarkdownOptions{
+		Title:       fmtedTitle,
+		UsagePrefix: strings.Join(commandSeq[:len(commandSeq)-1], " ") + " ",
+		LinkForCommand: func(s string) string {
+			prefix := "#"
+			if c.ids != nil {
+				prefix = "/t/"
+			}
+			if c.url != "" {
+				prefix = c.url + "t/"
+			}
 
-	// See Also
-	if len(info.SeeAlso) > 0 {
-		formatted += "> See also: "
-		prefix := "#"
-		if c.ids != nil {
-			prefix = "/t/"
-		}
-		if c.url != "" {
-			prefix = c.url + "t/"
-		}
-
-		for i, s := range info.SeeAlso {
 			target, err := c.getTargetCmd(s)
 			if err != nil {
 				fmt.Println(err.Error())
 			}
-			formatted += fmt.Sprintf("[%s](%s%s)", s, prefix, target)
-			if i < len(info.SeeAlso)-1 {
-				formatted += ", "
-			}
-		}
-		formatted += "\n"
-	}
-
-	if ref.alias != "" {
-		formatted += "**Alias:** " + ref.alias + "\n"
-	}
-	if ref.check != nil && ref.check.Obsolete() {
-		formatted += "*This command is deprecated*\n"
-	}
-	formatted += "\n"
-
-	// Summary
-	formatted += "## Summary\n" + info.Purpose + "\n\n"
-
-	// Usage
-	if strings.TrimSpace(info.Args) != "" {
-		formatted += fmt.Sprintf(`## Usage
-`+"```"+`%s [options] %s`+"```"+`
-
-`, strings.Join(commandSeq, " "), info.Args)
-	}
-
-	// Options
-	formattedFlags := c.formatFlags(ref.command, info)
-	if len(formattedFlags) > 0 {
-		formatted += "### Options\n" + formattedFlags + "\n"
-	}
-
-	// Examples
-	examples := info.Examples
-	if strings.TrimSpace(examples) != "" {
-		formatted += "## Examples\n" + examples + "\n\n"
-	}
-
-	// Details
-	doc := EscapeMarkdown(info.Doc)
-	if strings.TrimSpace(doc) != "" {
-		formatted += "## Details\n" + doc + "\n\n"
-	}
-
-	formatted += c.formatSubcommands(info.Subcommands, commandSeq)
-	formatted += "---\n\n"
-
-	return formatted
+			return fmt.Sprintf("%s%s", prefix, target)
+		},
+		LinkForSubcommand: func(s string) string {
+			return c.linkForCommand(strings.Join(append(commandSeq[1:], s), "_"))
+		},
+	})
+	return buf.String()
 }
 
 // getTargetCmd is an auxiliary function that returns the target command or
@@ -455,178 +408,4 @@ func (d *documentationCommand) getTargetCmd(cmd string) (string, error) {
 		return targetCmd, nil
 
 	}
-}
-
-// formatFlags is an internal formatting solution similar to
-// the gnuflag.PrintDefaults. The code is extended here
-// to permit additional formatting without modifying the
-// gnuflag package.
-func (d *documentationCommand) formatFlags(c Command, info *Info) string {
-	flagsAlias := FlagAlias(c, "")
-	if flagsAlias == "" {
-		// For backward compatibility, the default is 'flag'.
-		flagsAlias = "flag"
-	}
-	f := gnuflag.NewFlagSetWithFlagKnownAs(info.Name, gnuflag.ContinueOnError, flagsAlias)
-
-	// if we are working with the documentation command,
-	// we have to set flags on a new instance, otherwise
-	// we will overwrite the current flag values
-	if info.Name != "documentation" {
-		c.SetFlags(f)
-	} else {
-		c = newDocumentationCommand(d.super)
-		c.SetFlags(f)
-	}
-
-	// group together all flags for a given value, meaning that flag which sets the same value are
-	// grouped together and displayed with the same description, as below:
-	//
-	// -s, --short, --alternate-string | default value | some description.
-	flags := make(map[interface{}]flagsByLength)
-	f.VisitAll(func(f *gnuflag.Flag) {
-		flags[f.Value] = append(flags[f.Value], f)
-	})
-	if len(flags) == 0 {
-		return ""
-	}
-
-	// sort the output flags by shortest name for each group.
-	// Caution: this mean that description/default value displayed in documentation will
-	// be the one of the shortest alias. Other will be discarded. Be careful to have the same default
-	// values between each alias, and put the description on the shortest alias.
-	var byName flagsByName
-	for _, fl := range flags {
-		sort.Sort(fl)
-		byName = append(byName, fl)
-	}
-	sort.Sort(byName)
-
-	formatted := "| Flag | Default | Usage |\n"
-	formatted += "| --- | --- | --- |\n"
-	for _, fs := range byName {
-		// Collect all flag aliases (usually a short one and a plain one, like -v / --verbose)
-		formattedFlags := ""
-		for i, f := range fs {
-			if i > 0 {
-				formattedFlags += ", "
-			}
-			if len(f.Name) == 1 {
-				formattedFlags += fmt.Sprintf("`-%s`", f.Name)
-			} else {
-				formattedFlags += fmt.Sprintf("`--%s`", f.Name)
-			}
-		}
-		// display all the flags aliases and the default value and description of the shortest one.
-		// Escape Markdown in description in order to display it cleanly in the final documentation.
-		formatted += fmt.Sprintf("| %s | %s | %s |\n", formattedFlags,
-			EscapeMarkdown(fs[0].DefValue),
-			strings.ReplaceAll(EscapeMarkdown(fs[0].Usage), "\n", " "),
-		)
-	}
-	return formatted
-}
-
-// flagsByLength is a slice of flags implementing sort.Interface,
-// sorting primarily by the length of the flag, and secondarily
-// alphabetically.
-type flagsByLength []*gnuflag.Flag
-
-func (f flagsByLength) Less(i, j int) bool {
-	s1, s2 := f[i].Name, f[j].Name
-	if len(s1) != len(s2) {
-		return len(s1) < len(s2)
-	}
-	return s1 < s2
-}
-func (f flagsByLength) Swap(i, j int) {
-	f[i], f[j] = f[j], f[i]
-}
-func (f flagsByLength) Len() int {
-	return len(f)
-}
-
-// flagsByName is a slice of slices of flags implementing sort.Interface,
-// alphabetically sorting by the name of the first flag in each slice.
-type flagsByName [][]*gnuflag.Flag
-
-func (f flagsByName) Less(i, j int) bool {
-	return f[i][0].Name < f[j][0].Name
-}
-func (f flagsByName) Swap(i, j int) {
-	f[i], f[j] = f[j], f[i]
-}
-func (f flagsByName) Len() int {
-	return len(f)
-}
-
-// EscapeMarkdown returns a copy of the input string, in which any special
-// Markdown characters (e.g. < > |) are escaped.
-func EscapeMarkdown(raw string) string {
-	escapeSeqs := map[rune]string{
-		'<': "&lt;",
-		'>': "&gt;",
-		'&': "&amp;",
-		'|': "&#x7c;",
-	}
-
-	var escaped strings.Builder
-	escaped.Grow(len(raw))
-
-	lines := strings.Split(raw, "\n")
-	for i, line := range lines {
-		if strings.HasPrefix(line, "    ") {
-			// Literal code block - don't escape anything
-			escaped.WriteString(line)
-
-		} else {
-			// Keep track of whether we are inside a code span `...`
-			// If so, don't escape characters
-			insideCodeSpan := false
-
-			for _, c := range line {
-				if c == '`' {
-					insideCodeSpan = !insideCodeSpan
-				}
-
-				if !insideCodeSpan {
-					if escapeSeq, ok := escapeSeqs[c]; ok {
-						escaped.WriteString(escapeSeq)
-						continue
-					}
-				}
-				escaped.WriteRune(c)
-			}
-		}
-
-		if i < len(lines)-1 {
-			escaped.WriteRune('\n')
-		}
-	}
-
-	return escaped.String()
-}
-
-func (c *documentationCommand) formatSubcommands(subcommands map[string]string, commandSeq []string) string {
-	var output string
-
-	sorted := []string{}
-	for name := range subcommands {
-		if isDefaultCommand(name) {
-			continue
-		}
-		sorted = append(sorted, name)
-	}
-	sort.Strings(sorted)
-
-	if len(sorted) > 0 {
-		output += "## Subcommands\n"
-		for _, name := range sorted {
-			output += fmt.Sprintf("- [%s](%s)\n", name,
-				c.linkForCommand(strings.Join(append(commandSeq[1:], name), "_")))
-		}
-		output += "\n"
-	}
-
-	return output
 }
