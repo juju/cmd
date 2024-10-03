@@ -43,7 +43,7 @@ func Context(c *gc.C) *cmd.Context {
 		Stdout: &bytes.Buffer{},
 		Stderr: &bytes.Buffer{},
 	}
-	ctx.Context = context.TODO()
+	ctx.Context = context.Background()
 	return ctx
 }
 
