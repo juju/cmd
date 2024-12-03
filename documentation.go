@@ -51,12 +51,13 @@ in the file above.
 
 type documentationCommand struct {
 	CommandBase
-	super   *SuperCommand
-	out     string
-	noIndex bool
-	split   bool
-	url     string
-	idsPath string
+	super          *SuperCommand
+	out            string
+	noIndex        bool
+	split          bool
+	escapeMarkdown bool
+	url            string
+	idsPath        string
 	// ids is contains a numeric id of every command
 	// add-cloud: 1112
 	// remove-user: 3333
@@ -87,6 +88,7 @@ func (c *documentationCommand) SetFlags(f *gnuflag.FlagSet) {
 	f.StringVar(&c.out, "out", "", "Documentation output folder if not set the result is displayed using the standard output")
 	f.BoolVar(&c.noIndex, "no-index", false, "Do not generate the commands index")
 	f.BoolVar(&c.split, "split", false, "Generate a separate Markdown file for each command")
+	f.BoolVar(&c.split, "escape-markdown", true, "Escape special markdown characters e.g. < > |")
 	f.StringVar(&c.url, "url", "", "Documentation host URL")
 	f.StringVar(&c.idsPath, "discourse-ids", "", "File containing a mapping of commands and their discourse ids")
 }
@@ -422,7 +424,10 @@ func (c *documentationCommand) formatCommand(ref commandReference, title bool, c
 	}
 
 	// Details
-	doc := EscapeMarkdown(info.Doc)
+	doc := info.Doc
+	if c.escapeMarkdown {
+		doc = EscapeMarkdown(doc)
+	}
 	if strings.TrimSpace(doc) != "" {
 		formatted += "## Details\n" + doc + "\n\n"
 	}
