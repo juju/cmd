@@ -329,7 +329,7 @@ func (c *documentationCommand) writeIndex(w io.Writer) error {
 		}
 		// TODO: handle subcommands ??
 	}
-	_, err = fmt.Fprintf(w, "---\n\n")
+	_, err = fmt.Fprintf(w, "\n---\n\n")
 	return err
 }
 
@@ -628,7 +628,7 @@ func (c *documentationCommand) formatSubcommands(subcommands map[string]string, 
 		output += "## Subcommands\n"
 		for _, name := range sorted {
 			output += fmt.Sprintf("- [%s](%s)\n", name,
-				c.linkForCommand(strings.Join(append(commandSeq[1:], name), "_")))
+				c.linkForCommand(strings.Join(append(commandSeq[1:], name), "-")))
 		}
 		output += "\n"
 	}
