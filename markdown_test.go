@@ -11,7 +11,7 @@ import (
 	jc "github.com/juju/testing/checkers"
 	gc "gopkg.in/check.v1"
 
-	"github.com/juju/cmd/v3"
+	"github.com/juju/cmd/v4"
 )
 
 type markdownSuite struct{}
