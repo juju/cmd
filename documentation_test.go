@@ -38,6 +38,8 @@ func (s *documentationSuite) TestFormatCommand(c *gc.C) {
 		expected: (`
 > See also: [clouds](#clouds), [update-cloud](#update-cloud), [remove-cloud](#remove-cloud), [update-credential](#update-credential)
 
+**Aliases:** cloud-add, import-cloud
+
 ## Summary
 summary for add-cloud...
 
@@ -57,8 +59,6 @@ examples for add-cloud...
 ## Details
 details for add-cloud...
 
----
-
 `)[1:],
 	}, {
 		// no flags - don't print "Options" table
@@ -74,7 +74,6 @@ details for add-cloud...
 		},
 		title: false,
 		expected: (`
-
 ## Summary
 insert summary here...
 
@@ -86,8 +85,6 @@ insert examples here...
 
 ## Details
 insert details here...
-
----
 
 `)[1:],
 	}}
