@@ -105,3 +105,59 @@ func (*markdownSuite) TestOutput(c *gc.C) {
 	c.Assert(err, jc.ErrorIsNil)
 	c.Check(buf.String(), gc.Equals, string(expected))
 }
+
+// TestOutputWithoutArgs tests that the output of the PrintMarkdown function is
+// correct when a command does not need arguments, e.g. list commands.
+func (*markdownSuite) TestOutputWithoutArgs(c *gc.C) {
+	seeAlso := []string{"add-cloud", "update-cloud", "remove-cloud", "update-credential"}
+	subcommands := map[string]string{
+		"foo": "foo the bar baz",
+		"bar": "bar the baz foo",
+		"baz": "baz the foo bar",
+	}
+
+	command := &docTestCommand{
+		info: &cmd.Info{
+			Name:        "clouds",
+			Args:        "", //Empty args should still result in a usage field.
+			Purpose:     "List clouds.",
+			Doc:         "details for clouds...",
+			Examples:    "examples for clouds...",
+			SeeAlso:     seeAlso,
+			Aliases:     []string{"list-clouds"},
+			Subcommands: subcommands,
+		},
+	}
+
+	// These functions verify the provided argument is in the expected set.
+	linkForCommand := func(s string) string {
+		for _, cmd := range seeAlso {
+			if cmd == s {
+				return "https://docs.com/" + cmd
+			}
+		}
+		c.Fatalf("linkForCommand called with unexpected command %q", s)
+		return ""
+	}
+
+	linkForSubcommand := func(s string) string {
+		_, ok := subcommands[s]
+		if !ok {
+			c.Fatalf("linkForSubcommand called with unexpected subcommand %q", s)
+		}
+		return "https://docs.com/clouds/" + s
+	}
+
+	expected, err := os.ReadFile("testdata/list-clouds.md")
+	c.Assert(err, jc.ErrorIsNil)
+
+	var buf bytes.Buffer
+	err = cmd.PrintMarkdown(&buf, command, cmd.MarkdownOptions{
+		Title:             `Command "juju clouds"`,
+		UsagePrefix:       "juju ",
+		LinkForCommand:    linkForCommand,
+		LinkForSubcommand: linkForSubcommand,
+	})
+	c.Assert(err, jc.ErrorIsNil)
+	c.Check(buf.String(), gc.Equals, string(expected))
+}
