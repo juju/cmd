@@ -63,10 +63,6 @@ type documentationCommand struct {
 	// remove-user: 3333
 	// etc...
 	ids map[string]string
-	// reverseAliases maintains a reverse map of the alias and the
-	// targetting command. This is used to find the ids corresponding
-	// to a given alias
-	reverseAliases map[string]string
 }
 
 func newDocumentationCommand(s *SuperCommand) *documentationCommand {
@@ -127,28 +123,18 @@ func (c *documentationCommand) dumpOneFile(ctx *Context) error {
 }
 
 // getSortedListCommands returns an array with the sorted list of
-// command names
+// command names for those commands which are not aliases.
 func (c *documentationCommand) getSortedListCommands() []string {
 	// sort the commands
-	sorted := make([]string, len(c.super.subcmds))
-	i := 0
-	for k := range c.super.subcmds {
-		sorted[i] = k
-		i++
+	sorted := make([]string, 0, len(c.super.subcmds))
+	for k, cmd := range c.super.subcmds {
+		if cmd.alias != "" {
+			continue
+		}
+		sorted = append(sorted, k)
 	}
 	sort.Strings(sorted)
 	return sorted
-}
-
-func (c *documentationCommand) computeReverseAliases() {
-	c.reverseAliases = make(map[string]string)
-
-	for name, content := range c.super.subcmds {
-		for _, alias := range content.command.Info().Aliases {
-			c.reverseAliases[alias] = name
-		}
-	}
-
 }
 
 // dumpSeveralFiles is invoked when every command is dumped into
@@ -195,8 +181,6 @@ func (c *documentationCommand) dumpSeveralFiles() error {
 
 // writeDocs (recursively) writes docs for all commands in the given folder.
 func (c *documentationCommand) writeDocs(folder string, superCommands []string, printDefaultCommands bool) error {
-	c.computeReverseAliases()
-
 	for name, ref := range c.super.subcmds {
 		if !printDefaultCommands && isDefaultCommand(name) {
 			continue
@@ -396,16 +380,8 @@ func (d *documentationCommand) getTargetCmd(cmd string) (string, error) {
 	target, found := d.ids[cmd]
 	if found {
 		return target, nil
-	} else {
-		// check if this is an alias
-		targetCmd, found := d.reverseAliases[cmd]
-		fmt.Printf("use alias %s -> %s\n", cmd, targetCmd)
-		if !found {
-			// if we're working with ids, and we have to mmake the translation,
-			// we need to have an id per every requested command
-			return "", fmt.Errorf("requested id for command %s was not found", cmd)
-		}
-		return targetCmd, nil
-
 	}
+	// if we're working with ids, and we have to mmake the translation,
+	// we need to have an id per every requested command
+	return "", fmt.Errorf("requested id for command %s was not found", cmd)
 }
