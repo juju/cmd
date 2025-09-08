@@ -185,6 +185,9 @@ func (c *documentationCommand) writeDocs(folder string, superCommands []string, 
 		if !printDefaultCommands && isDefaultCommand(name) {
 			continue
 		}
+		if ref.alias != "" {
+			continue
+		}
 
 		commandSeq := append(superCommands, name)
 
